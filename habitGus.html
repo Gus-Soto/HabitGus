@@ -1,0 +1,749 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { CheckCircle, Circle, Plus, Trash2, Edit, Zap, BookOpen, Dumbbell, TrendingUp, Home, Clock, Repeat, BarChart2, Lightbulb, Trophy, PlayCircle, PauseCircle, RotateCcw, Target, Award, BrainCircuit } from 'lucide-react';
+
+// --- UI Components ---
+
+const Modal = ({ isOpen, onClose, children }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 overflow-y-auto">
+      <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl p-6 lg:p-8 w-full max-w-md relative animate-fade-in-up my-8">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-200 transition-transform duration-300 hover:scale-125">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// --- Feature Components ---
+
+const TaskForm = ({ onAddTask, editingTask, onUpdateTask, selectedDate, goals, onClose }) => {
+  const [title, setTitle] = useState('');
+  const [quadrant, setQuadrant] = useState('do');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [linkedGoalId, setLinkedGoalId] = useState('');
+
+  useEffect(() => {
+    const initialDate = selectedDate ? new Date(selectedDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    const initialTime = new Date().toTimeString().slice(0, 5);
+
+    if (editingTask) {
+      setTitle(editingTask.title);
+      setQuadrant(editingTask.quadrant);
+      setDate(editingTask.date || initialDate);
+      setTime(editingTask.time || initialTime);
+      setLinkedGoalId(editingTask.linkedGoalId || '');
+    } else {
+      setTitle('');
+      setQuadrant('do');
+      setDate(initialDate);
+      setTime(initialTime);
+      setLinkedGoalId('');
+    }
+  }, [editingTask, selectedDate]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    const taskData = { title, quadrant, date, time, linkedGoalId };
+    if (editingTask) {
+      onUpdateTask(editingTask.id, taskData);
+    } else {
+      onAddTask(taskData);
+    }
+    onClose(); // Close modal on submit
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="text-xl font-bold text-white">{editingTask ? 'Editar Tarea' : 'Añadir Nueva Tarea'}</h3>
+      <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="¿Cuál es la tarea?" className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:ring-2 focus:ring-indigo-500" />
+      <div className="grid grid-cols-2 gap-4">
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600" />
+        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600" />
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-gray-400 mb-1">Vincular a Meta</label>
+        <select value={linkedGoalId} onChange={(e) => setLinkedGoalId(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600">
+          <option value="">Ninguna</option>
+          {goals.map(goal => <option key={goal.id} value={goal.id}>{goal.title}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-gray-400 mb-1">Matriz de Eisenhower</label>
+        <select value={quadrant} onChange={(e) => setQuadrant(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600">
+          <option value="do">Urgente e Importante</option>
+          <option value="plan">Importante, No Urgente</option>
+          <option value="delegate">Urgente, No Importante</option>
+          <option value="eliminate">Ni Urgente, Ni Importante</option>
+        </select>
+      </div>
+      <button type="submit" className="w-full mt-4 p-3 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-lg flex items-center justify-center">
+        <Plus className="mr-2" /> {editingTask ? 'Actualizar Tarea' : 'Añadir Tarea'}
+      </button>
+    </form>
+  );
+};
+
+const HabitForm = ({ onAddHabit, editingHabit, onUpdateHabit, goals, onClose }) => {
+    const [name, setName] = useState('');
+    const [category, setCategory] = useState('Salud');
+    const [duration, setDuration] = useState(30);
+    const [frequencyPeriod, setFrequencyPeriod] = useState('Día');
+    const [time, setTime] = useState('08:00');
+    const [selectedDays, setSelectedDays] = useState([]);
+    const [linkedGoalId, setLinkedGoalId] = useState('');
+
+    const weekDays = ["D", "L", "M", "X", "J", "V", "S"];
+
+    useEffect(() => {
+        if (editingHabit) {
+            setName(editingHabit.name);
+            setCategory(editingHabit.category);
+            setDuration(editingHabit.duration || 30);
+            setFrequencyPeriod(editingHabit.frequencyPeriod || 'Día');
+            setTime(editingHabit.time || '08:00');
+            setSelectedDays(editingHabit.selectedDays || []);
+            setLinkedGoalId(editingHabit.linkedGoalId || '');
+        } else {
+            setName(''); setCategory('Salud'); setDuration(30);
+            setFrequencyPeriod('Día'); setTime('08:00'); setSelectedDays([]);
+            setLinkedGoalId('');
+        }
+    }, [editingHabit]);
+
+    const handleDayToggle = (dayIndex) => {
+        setSelectedDays(prev => prev.includes(dayIndex) ? prev.filter(d => d !== dayIndex) : [...prev, dayIndex]);
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+        const habitData = { name, category, duration: Number(duration), frequencyPeriod, time, selectedDays, linkedGoalId, startDate: new Date().toISOString().split('T')[0], progress: editingHabit ? editingHabit.progress : {} };
+        if (editingHabit) {
+            onUpdateHabit(editingHabit.id, habitData);
+        } else {
+            onAddHabit(habitData);
+        }
+        onClose(); // Close modal on submit
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <h3 className="text-xl font-bold text-white">{editingHabit ? 'Editar Hábito' : 'Crear Nuevo Hábito'}</h3>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del hábito (Ej: Leer)" className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600" />
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-semibold text-gray-400 mb-1">Categoría</label>
+                    <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600">
+                        <option>Salud</option> <option>Trabajo</option> <option>Desarrollo Personal</option> <option>Ocio</option>
+                    </select>
+                </div>
+                 <div>
+                    <label className="block text-sm font-semibold text-gray-400 mb-1">Hora</label>
+                    <input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600" />
+                </div>
+            </div>
+             <div>
+                <label className="block text-sm font-semibold text-gray-400 mb-1">Vincular a Meta</label>
+                <select value={linkedGoalId} onChange={(e) => setLinkedGoalId(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600">
+                    <option value="">Ninguna</option>
+                    {goals.map(goal => <option key={goal.id} value={goal.id}>{goal.title}</option>)}
+                </select>
+            </div>
+            <div>
+                <label className="block text-sm font-semibold text-gray-400 mb-1">Frecuencia</label>
+                <select value={frequencyPeriod} onChange={e => setFrequencyPeriod(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600">
+                    <option>Día</option><option>Semana</option>
+                </select>
+            </div>
+            {frequencyPeriod === 'Semana' && (
+                <div>
+                    <label className="block text-sm font-semibold text-gray-400 mb-1">Seleccionar días</label>
+                    <div className="flex justify-around bg-gray-700 p-2 rounded-lg">
+                        {weekDays.map((day, index) => (
+                            <button key={index} type="button" onClick={() => handleDayToggle(index)} className={`w-8 h-8 rounded-full font-bold transition-colors ${selectedDays.includes(index) ? 'bg-indigo-500 text-white' : 'bg-gray-600 text-gray-300'}`}>
+                                {day}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+             <div>
+                <label className="block text-sm font-semibold text-gray-400 mb-1">Duración (minutos)</label>
+                <input type="number" min="1" value={duration} onChange={e => setDuration(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600" />
+            </div>
+            <button type="submit" className="w-full mt-4 p-3 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-lg flex items-center justify-center">
+                <Plus className="mr-2" /> {editingHabit ? 'Actualizar Hábito' : 'Crear Hábito'}
+            </button>
+        </form>
+    );
+};
+
+const TodayView = ({ tasks, habits, onUpdateTask, onSetEditingTask, onSetEditingHabit, addXp, onUpdateHabit }) => {
+    const todayString = new Date().toISOString().split('T')[0];
+    const todaysTasks = tasks.filter(t => t.date === todayString);
+    
+    const todaysHabits = habits.filter(habit => {
+        const todayDate = new Date();
+        todayDate.setHours(0,0,0,0);
+
+        if (!habit.startDate) return false; // Guard against undefined startDate
+        
+        const startDate = new Date(habit.startDate);
+        startDate.setHours(0,0,0,0);
+
+        if (todayDate < startDate) return false;
+        
+        if (habit.frequencyPeriod === 'Día') return true;
+        
+        if (habit.frequencyPeriod === 'Semana') {
+            const currentDay = todayDate.getDay(); // Sunday = 0, Monday = 1, etc.
+            return (habit.selectedDays || []).includes(currentDay);
+        }
+        return false;
+    });
+    
+    const combined = [
+        ...todaysTasks.map(t => ({...t, type: 'task'})),
+        ...todaysHabits.map(h => ({...h, type: 'habit'}))
+    ].sort((a, b) => (a.time || '23:59').localeCompare(b.time || '23:59'));
+
+    const [pomodoroTaskId, setPomodoroTaskId] = useState(null);
+
+    const handleTaskComplete = (task) => {
+        if (!task.completed) {
+            addXp(10);
+        }
+        onUpdateTask(task.id, { completed: !task.completed });
+    };
+
+    const handleHabitComplete = (habit) => {
+        const today = new Date().toDateString();
+        const isCompleted = isHabitCompletedToday(habit);
+
+        const updatedProgress = {
+            ...habit.progress,
+            [today]: isCompleted ? 0 : 1 // Toggle completion
+        };
+        
+        if (!isCompleted) {
+            addXp(5);
+        }
+        onUpdateHabit(habit.id, { progress: updatedProgress });
+    };
+
+    const isHabitCompletedToday = (habit) => {
+        const today = new Date().toDateString();
+        return (habit.progress && habit.progress[today] || 0) >= 1;
+    };
+
+    return (
+        <div className="p-4 space-y-4">
+            <DailyMotivation />
+            <h2 className="text-3xl font-bold text-white">Hoy</h2>
+            {combined.map(item => (
+                <div key={`${item.type}-${item.id}`} className="bg-gray-800 p-4 rounded-2xl flex items-center gap-4">
+                    {item.type === 'task' ? (
+                        <>
+                            <button onClick={() => handleTaskComplete(item)}>{item.completed ? <CheckCircle className="text-green-400" /> : <Circle className="text-gray-500" />}</button>
+                            <div className="flex-grow">
+                                <p className={`text-white ${item.completed ? 'line-through text-gray-500' : ''}`}>{item.title}</p>
+                                <p className="text-sm text-gray-400">Tarea • {item.time}</p>
+                            </div>
+                             <button onClick={() => setPomodoroTaskId(pomodoroTaskId === item.id ? null : item.id)} className="p-1 text-gray-400 hover:text-indigo-400">
+                                <Clock size={18}/>
+                            </button>
+                            <button onClick={() => onSetEditingTask(item)} className="p-1 text-gray-400 hover:text-blue-400"><Edit size={18}/></button>
+                        </>
+                    ) : (
+                        <>
+                            <Dumbbell className="text-indigo-400"/>
+                             <div className="flex-grow">
+                                <p className="text-white">{item.name}</p>
+                                <p className="text-sm text-gray-400">Hábito • {item.time} • {item.duration} min</p>
+                            </div>
+                            <button onClick={() => handleHabitComplete(item)} className="p-1 text-gray-400 hover:text-green-400">
+                                {isHabitCompletedToday(item) ? <CheckCircle className="text-green-400" size={18}/> : <Circle className="text-gray-500" size={18}/>}
+                            </button>
+                            <button onClick={() => onSetEditingHabit(item)} className="p-1 text-gray-400 hover:text-blue-400"><Edit size={18}/></button>
+                        </>
+                    )}
+                </div>
+            ))}
+            {combined.length === 0 && <p className="text-gray-500 text-center py-8">Nada para hoy. ¡Añade tareas o hábitos!</p>}
+            {pomodoroTaskId && <PomodoroTimer taskId={pomodoroTaskId} />}
+        </div>
+    )
+};
+
+const PomodoroTimer = ({ taskId }) => {
+    const [time, setTime] = useState(25 * 60);
+    const [isActive, setIsActive] = useState(false);
+
+    useEffect(() => {
+        let interval = null;
+        if (isActive && time > 0) {
+            interval = setInterval(() => {
+                setTime(t => t - 1);
+            }, 1000);
+        } else if (time === 0) {
+            setIsActive(false);
+            // Optional: Add a notification or sound
+        }
+        return () => clearInterval(interval);
+    }, [isActive, time]);
+
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+
+    return (
+        <div className="bg-gray-700 p-4 rounded-2xl mt-2 text-center">
+            <p className="text-lg font-bold text-white">Modo Enfoque</p>
+            <p className="text-5xl font-mono text-indigo-400 my-4">{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</p>
+            <div className="flex justify-center gap-4">
+                <button onClick={() => setIsActive(!isActive)} className="p-2 text-white">
+                    {isActive ? <PauseCircle size={32}/> : <PlayCircle size={32}/>}
+                </button>
+                <button onClick={() => { setIsActive(false); setTime(25*60); }} className="p-2 text-white">
+                    <RotateCcw size={32}/>
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const GoalsView = ({ goals, onAddGoal, onDeleteGoal, tasks }) => {
+    const [newGoalTitle, setNewGoalTitle] = useState('');
+
+    const handleAddGoal = (e) => {
+        e.preventDefault();
+        if (newGoalTitle.trim()) {
+            onAddGoal({ title: newGoalTitle.trim() });
+            setNewGoalTitle('');
+        }
+    };
+    
+    return (
+        <div className="p-4">
+            <h2 className="text-3xl font-bold text-white mb-6 flex items-center"><Target className="mr-3 text-indigo-400" /> Metas Estratégicas</h2>
+            <form onSubmit={handleAddGoal} className="flex gap-2 mb-6">
+                <input type="text" value={newGoalTitle} onChange={e => setNewGoalTitle(e.target.value)} placeholder="Nueva meta trimestral/anual" className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600"/>
+                <button type="submit" className="p-3 bg-indigo-600 text-white rounded-lg font-bold"><Plus/></button>
+            </form>
+            <div className="space-y-4">
+                {goals.map(goal => {
+                    const linkedTasks = tasks.filter(t => t.linkedGoalId === String(goal.id));
+                    const completedTasks = linkedTasks.filter(t => t.completed).length;
+                    const progress = linkedTasks.length > 0 ? (completedTasks / linkedTasks.length) * 100 : 0;
+
+                    return (
+                        <div key={goal.id} className="bg-gray-800 p-4 rounded-2xl">
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="font-bold text-lg text-white">{goal.title}</span>
+                                <button onClick={() => onDeleteGoal(goal.id)} className="p-1 text-gray-400 hover:text-red-400"><Trash2 size={18}/></button>
+                            </div>
+                            <p className="text-sm text-gray-400 mb-2">{completedTasks} de {linkedTasks.length} tareas completadas</p>
+                            <div className="w-full bg-gray-700 rounded-full h-2.5">
+                                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                            </div>
+                        </div>
+                    );
+                })}
+                 {goals.length === 0 && <p className="text-gray-500 text-center py-8">Define tus grandes objetivos para dar dirección a tus tareas.</p>}
+            </div>
+        </div>
+    );
+};
+
+const AchievementsView = ({ achievements }) => {
+    return (
+        <div className="p-4">
+            <h2 className="text-3xl font-bold text-white mb-6 flex items-center"><Trophy className="mr-3 text-yellow-400" /> Logros Desbloqueados</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {achievements.map(ach => (
+                     <div key={ach.id} className={`bg-gray-800 p-4 rounded-2xl text-center flex flex-col items-center justify-center aspect-square transition-all duration-300 ${ach.unlocked ? 'opacity-100 transform scale-100' : 'opacity-40'}`}>
+                        <Trophy size={48} className={ach.unlocked ? 'text-yellow-400' : 'text-gray-500'}/>
+                        <h3 className="font-bold text-white mt-2">{ach.title}</h3>
+                        <p className="text-xs text-gray-400">{ach.description}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const DailyMotivation = () => {
+    const quotes = [
+        "El secreto para salir adelante es empezar.", "La disciplina es el puente entre las metas y los logros.", "No tienes que ser grande para empezar, pero tienes que empezar para ser grande.", "Un pequeño progreso cada día suma grandes resultados.", "La clave no es priorizar lo que está en tu agenda, sino agendar tus prioridades."
+    ];
+    const tips = [
+        "Regla de los 2 minutos: Si una tarea toma menos de dos minutos, hazla ahora.", "Acumulación de hábitos: Después de un hábito actual, haz un nuevo hábito.", "Diseña tu entorno: Haz las señales de los buenos hábitos obvias y visibles.", "Agrupación de tentaciones: Vincula una acción que quieres hacer con una que necesitas hacer.", "Nunca te saltes dos veces: Si fallas un día, intenta volver a la normalidad lo antes posible."
+    ];
+
+    const [dailyQuote] = useState(() => quotes[Math.floor(Math.random() * quotes.length)]);
+    const [dailyTip] = useState(() => tips[Math.floor(Math.random() * tips.length)]);
+
+    return (
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 p-4 rounded-2xl space-y-3">
+            <div className="flex items-start gap-3">
+                <Zap className="text-yellow-400 flex-shrink-0 mt-1"/>
+                <p className="text-white italic">"{dailyQuote}"</p>
+            </div>
+            <div className="border-t border-gray-700 my-2"></div>
+            <div className="flex items-start gap-3">
+                <Lightbulb className="text-blue-400 flex-shrink-0 mt-1"/>
+                <p className="text-gray-300"><span className="font-bold">Tip:</span> {dailyTip}</p>
+            </div>
+        </div>
+    );
+};
+
+const HabitTracker = ({ habits, onSetEditingHabit, onDeleteHabit }) => {
+    const getCategoryIcon = (category) => {
+        switch(category) {
+            case 'Salud': return <Dumbbell className="text-green-400" />;
+            case 'Trabajo': return <TrendingUp className="text-blue-400" />;
+            case 'Desarrollo Personal': return <BookOpen className="text-yellow-400" />;
+            case 'Ocio': return <Home className="text-purple-400" />;
+            default: return <Award className="text-gray-400" />;
+        }
+    };
+
+    return (
+        <div className="p-4">
+            <h2 className="text-3xl font-bold text-white mb-6 flex items-center"><Award className="mr-3 text-indigo-400" /> Mis Hábitos</h2>
+            <div className="space-y-4">
+                {habits.map(habit => (
+                    <div key={habit.id} className="bg-gray-800 p-4 rounded-2xl">
+                        <div className="flex justify-between items-center mb-3">
+                            <div className="flex items-center gap-3">
+                                {getCategoryIcon(habit.category)}
+                                <span className="font-bold text-lg text-white">{habit.name}</span>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => onSetEditingHabit(habit)} className="p-1 text-gray-400 hover:text-blue-400"><Edit size={18}/></button>
+                                <button onClick={() => onDeleteHabit(habit.id)} className="p-1 text-gray-400 hover:text-red-400"><Trash2 size={18}/></button>
+                            </div>
+                        </div>
+                        <div className="text-sm text-gray-400 mb-3 flex items-center gap-4">
+                            <span className="flex items-center gap-1"><Repeat size={14}/> {habit.frequencyPeriod === 'Día' ? 'Diario' : `${(habit.selectedDays || []).length} días/sem`}</span>
+                            <span className="flex items-center gap-1"><Clock size={14}/> {habit.duration} min</span>
+                        </div>
+                    </div>
+                ))}
+                {habits.length === 0 && <p className="text-gray-500 text-center py-8">Crea hábitos para construir la vida que deseas, un día a la vez.</p>}
+            </div>
+        </div>
+    );
+};
+
+const StatsView = ({ habits }) => {
+    const [selectedHabitId, setSelectedHabitId] = useState('');
+
+    useEffect(() => {
+        if(habits.length > 0 && !selectedHabitId) {
+            setSelectedHabitId(habits[0].id);
+        }
+    }, [habits, selectedHabitId]);
+
+    const selectedHabit = habits.find(h => h.id === selectedHabitId);
+
+    const calculateStats = useCallback((habit) => {
+        if (!habit || !habit.progress) return { streak: 0, bestStreak: 0, successRate: 0, chartData: [] };
+        
+        let currentStreak = 0;
+        let bestStreak = 0;
+        let completedDays = 0;
+        let totalDaysSinceStart = 0;
+        const chartData = [];
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const startDate = new Date(habit.startDate);
+        startDate.setHours(0, 0, 0, 0);
+
+        let tempDate = new Date(startDate);
+
+        while(tempDate <= today) {
+            totalDaysSinceStart++;
+            const dateString = tempDate.toDateString();
+            const isCompleted = (habit.progress[dateString] || 0) >= 1;
+
+            if(isCompleted) {
+                completedDays++;
+                currentStreak++;
+            } else {
+                bestStreak = Math.max(bestStreak, currentStreak);
+                currentStreak = 0;
+            }
+            tempDate.setDate(tempDate.getDate() + 1);
+        }
+        bestStreak = Math.max(bestStreak, currentStreak);
+
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(today.getDate() - i);
+            const dateString = date.toDateString();
+            const isCompleted = (habit.progress[dateString] || 0) >= 1;
+            chartData.push({ name: date.toLocaleDateString('es-ES', { weekday: 'short' }), success: isCompleted ? 100 : 0 });
+        }
+
+        const successRate = totalDaysSinceStart > 0 ? Math.round((completedDays / totalDaysSinceStart) * 100) : 0;
+
+        return { streak: currentStreak, bestStreak, successRate, chartData };
+    }, []);
+
+    const stats = selectedHabit ? calculateStats(selectedHabit) : null;
+    
+    return (
+        <div className="p-4">
+            <h2 className="text-3xl font-bold text-white mb-6 flex items-center"><BarChart2 className="mr-3 text-indigo-400" /> Estadísticas</h2>
+            <select value={selectedHabitId} onChange={(e) => setSelectedHabitId(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 mb-6">
+                <option value="" disabled>Selecciona un hábito</option>
+                {habits.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+            </select>
+
+            {selectedHabit && stats ? (
+                <div className="bg-gray-800 p-4 rounded-2xl space-y-6">
+                    <div>
+                        <h3 className="text-xl font-bold text-white mb-4">{selectedHabit.name}</h3>
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <p className="text-2xl font-bold text-green-400">{stats.streak}</p>
+                                <p className="text-sm text-gray-400">Racha Actual</p>
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-orange-400">{stats.bestStreak}</p>
+                                <p className="text-sm text-gray-400">Mejor Racha</p>
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-blue-400">{stats.successRate}%</p>
+                                <p className="text-sm text-gray-400">Tasa de Éxito</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-white mb-2">Progreso Últimos 7 Días</h4>
+                        <div className="flex justify-around items-end h-40 bg-gray-700 p-4 rounded-lg">
+                            {stats.chartData.map((day, index) => (
+                                <div key={index} className="flex flex-col items-center flex-1">
+                                    <div className="w-full h-full flex items-end justify-center">
+                                       <div className="w-6 bg-gray-600 rounded-t-md" style={{height: '100%'}}>
+                                           <div className={`bg-indigo-500 rounded-t-md w-full transition-all duration-500`} style={{height: `${day.success}%`}}></div>
+                                       </div>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-1">{day.name}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                 <p className="text-gray-500 text-center py-8">Selecciona un hábito para ver tus estadísticas o crea uno nuevo.</p>
+            )}
+        </div>
+    );
+};
+
+// --- Main App Component ---
+function App() {
+  const useStickyState = (defaultValue, key) => {
+    const [value, setValue] = useState(() => {
+      const stickyValue = window.localStorage.getItem(key);
+      return stickyValue !== null
+        ? JSON.parse(stickyValue)
+        : defaultValue;
+    });
+    useEffect(() => {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    }, [key, value]);
+    return [value, setValue];
+  };
+
+  const [tasks, setTasks] = useStickyState([], 'tasks');
+  const [habits, setHabits] = useStickyState([], 'habits');
+  const [goals, setGoals] = useStickyState([], 'goals');
+  const [achievements, setAchievements] = useStickyState([
+    { id: 1, title: "Primer Paso", description: "Crea tu primera tarea.", unlocked: false },
+    { id: 2, title: "Hábito Iniciado", description: "Crea tu primer hábito.", unlocked: false },
+    { id: 3, title: "Planificador", description: "Completa 10 tareas.", unlocked: false },
+    { id: 4, title: "Constancia", description: "Mantén una racha de 7 días en un hábito.", unlocked: false },
+  ], 'achievements');
+  const [user, setUser] = useStickyState({ xp: 0, level: 1 }, 'user');
+  
+  const [isTaskModalOpen, setTaskModalOpen] = useState(false);
+  const [isHabitModalOpen, setHabitModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [editingHabit, setEditingHabit] = useState(null);
+  const [selectedDate] = useState(new Date());
+  const [activeView, setActiveView] = useState('today');
+
+  const addXp = useCallback((amount) => {
+    setUser(prevUser => {
+      const newXp = prevUser.xp + amount;
+      const xpToNextLevel = prevUser.level * 100;
+      if (newXp >= xpToNextLevel) {
+        return { xp: newXp - xpToNextLevel, level: prevUser.level + 1 };
+      }
+      return { ...prevUser, xp: newXp };
+    });
+  }, [setUser]);
+
+  const checkAchievements = useCallback(() => {
+    setAchievements(prev => prev.map(ach => {
+      if (ach.unlocked) return ach;
+      let unlocked = false;
+      switch(ach.id) {
+        case 1: if (tasks.length > 0) unlocked = true; break;
+        case 2: if (habits.length > 0) unlocked = true; break;
+        case 3: if (tasks.filter(t => t.completed).length >= 10) unlocked = true; break;
+        case 4: 
+          const has7dayStreak = habits.some(h => {
+              const stats = calculateStats(h); // Assuming calculateStats is accessible
+              return stats && stats.bestStreak >= 7;
+          });
+          if (has7dayStreak) unlocked = true;
+          break;
+        default: break;
+      }
+      return { ...ach, unlocked };
+    }));
+  }, [tasks, habits, setAchievements]);
+  
+  // You need to define calculateStats here or import it if it's external
+  const calculateStats = (habit) => {
+      if (!habit || !habit.progress) return { bestStreak: 0 };
+      let bestStreak = 0;
+      let currentStreak = 0;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const startDate = new Date(habit.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      let tempDate = new Date(startDate);
+      while (tempDate <= today) {
+          const dateString = tempDate.toDateString();
+          if ((habit.progress[dateString] || 0) >= 1) {
+              currentStreak++;
+          } else {
+              bestStreak = Math.max(bestStreak, currentStreak);
+              currentStreak = 0;
+          }
+          tempDate.setDate(tempDate.getDate() + 1);
+      }
+      bestStreak = Math.max(bestStreak, currentStreak);
+      return { bestStreak };
+  };
+
+
+  useEffect(() => {
+    checkAchievements();
+  }, [tasks, habits, checkAchievements]);
+
+  const handleAddTask = (taskData) => {
+    const newTask = { id: Date.now().toString(), ...taskData, completed: false };
+    setTasks(prev => [...prev, newTask]);
+    addXp(5);
+  };
+  
+  const handleUpdateTask = (id, updatedData) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updatedData } : t));
+  };
+
+  const handleSetEditingTask = (task) => {
+    setEditingTask(task);
+    setTaskModalOpen(true);
+  };
+  
+  const handleAddHabit = (habitData) => {
+    const newHabit = { id: Date.now().toString(), ...habitData };
+    setHabits(prev => [...prev, newHabit]);
+  };
+
+  const handleUpdateHabit = (id, updatedData) => {
+    setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updatedData } : h));
+  };
+
+  const handleSetEditingHabit = (habit) => {
+    setEditingHabit(habit);
+    setHabitModalOpen(true);
+  };
+
+  const handleDeleteHabit = (id) => {
+      setHabits(prev => prev.filter(h => h.id !== id));
+  }
+  
+  const handleAddGoal = (goalData) => {
+    const newGoal = { id: Date.now().toString(), ...goalData };
+    setGoals(prev => [...prev, newGoal]);
+  };
+
+  const handleDeleteGoal = (id) => {
+    setGoals(prev => prev.filter(g => g.id !== id));
+  };
+
+  const renderView = () => {
+    switch (activeView) {
+      case 'today':
+        return <TodayView tasks={tasks} habits={habits} onUpdateTask={handleUpdateTask} onUpdateHabit={handleUpdateHabit} onSetEditingTask={handleSetEditingTask} onSetEditingHabit={handleSetEditingHabit} addXp={addXp} />;
+      case 'habits':
+        return <HabitTracker habits={habits} onSetEditingHabit={handleSetEditingHabit} onDeleteHabit={handleDeleteHabit} />;
+      case 'goals':
+        return <GoalsView goals={goals} onAddGoal={handleAddGoal} onDeleteGoal={handleDeleteGoal} tasks={tasks} />;
+      case 'stats':
+        return <StatsView habits={habits} />;
+      case 'achievements':
+        return <AchievementsView achievements={achievements} />;
+      default:
+        return <TodayView tasks={tasks} habits={habits} onUpdateTask={handleUpdateTask} onSetEditingTask={handleSetEditingTask} addXp={addXp} />;
+    }
+  };
+
+  return (
+    <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col md:flex-row">
+      <nav className="w-full md:w-20 lg:w-64 bg-gray-800 p-2 md:p-4 flex md:flex-col justify-between border-b-2 md:border-b-0 md:border-r-2 border-gray-700">
+        <div>
+          <div className="flex items-center gap-2 mb-0 md:mb-8 p-2">
+            <BrainCircuit className="text-indigo-400" size={32} />
+            <h1 className="text-xl font-bold hidden lg:block">HabitGus</h1>
+          </div>
+          <ul className="flex flex-row md:flex-col md:space-y-2 justify-around md:justify-start">
+            <li><button onClick={() => setActiveView('today')} className={`w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg ${activeView === 'today' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}><Home /><span className="hidden lg:inline">Hoy</span></button></li>
+            <li><button onClick={() => setActiveView('habits')} className={`w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg ${activeView === 'habits' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}><Award /><span className="hidden lg:inline">Hábitos</span></button></li>
+            <li><button onClick={() => setActiveView('goals')} className={`w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg ${activeView === 'goals' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}><Target /><span className="hidden lg:inline">Metas</span></button></li>
+            <li><button onClick={() => setActiveView('stats')} className={`w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg ${activeView === 'stats' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}><BarChart2 /><span className="hidden lg:inline">Estadísticas</span></button></li>
+            <li><button onClick={() => setActiveView('achievements')} className={`w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg ${activeView === 'achievements' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}><Trophy /><span className="hidden lg:inline">Logros</span></button></li>
+          </ul>
+        </div>
+        <div className="hidden md:block space-y-2">
+            <button onClick={() => { setEditingHabit(null); setHabitModalOpen(true); }} className="w-full p-3 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-bold flex items-center justify-center lg:justify-start gap-2"><Repeat /><span className="hidden lg:inline">Nuevo Hábito</span></button>
+            <button onClick={() => { setEditingTask(null); setTaskModalOpen(true); }} className="w-full p-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center lg:justify-start gap-2"><Plus /><span className="hidden lg:inline">Nueva Tarea</span></button>
+        </div>
+      </nav>
+
+      <main className="flex-1 overflow-y-auto">
+        {renderView()}
+      </main>
+      
+      {/* Floating Action Buttons for Mobile */}
+      <div className="md:hidden fixed bottom-4 right-4 flex flex-col gap-3">
+         <button onClick={() => { setEditingHabit(null); setHabitModalOpen(true); }} className="bg-gray-600 text-white rounded-full p-4 shadow-lg"><Repeat size={24}/></button>
+         <button onClick={() => { setEditingTask(null); setTaskModalOpen(true); }} className="bg-indigo-600 text-white rounded-full p-4 shadow-lg"><Plus size={24}/></button>
+      </div>
+
+
+      <Modal isOpen={isTaskModalOpen} onClose={() => {setTaskModalOpen(false); setEditingTask(null);}}>
+        <TaskForm onAddTask={handleAddTask} editingTask={editingTask} onUpdateTask={handleUpdateTask} selectedDate={selectedDate} goals={goals} onClose={() => {setTaskModalOpen(false); setEditingTask(null);}} />
+      </Modal>
+      <Modal isOpen={isHabitModalOpen} onClose={() => {setHabitModalOpen(false); setEditingHabit(null);}}>
+        <HabitForm onAddHabit={handleAddHabit} editingHabit={editingHabit} onUpdateHabit={handleUpdateHabit} goals={goals} onClose={() => {setHabitModalOpen(false); setEditingHabit(null);}} />
+      </Modal>
+    </div>
+  );
+};
+
+export default App;
