@@ -30,6 +30,16 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        /* Estilos para el tooltip del Heatmap */
+        .heatmap-cell .tooltip {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .heatmap-cell:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,9 +76,9 @@
       console.log("Firebase inicializado y servicios disponibles:", { db, auth });
     </script>
     <script type="text/babel">
-        const { useState, useEffect, useCallback } = React;
+        const { useState, useEffect, useCallback, useMemo } = React;
 
-        // --- Iconos SVG como Componentes (tu código existente) ---
+        // --- Iconos SVG como Componentes (código existente) ---
         const Icon = ({ children, className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>;
         const CheckCircle = ({className}) => <Icon className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></Icon>;
         const Circle = ({className}) => <Icon className={className}><circle cx="12" cy="12" r="10"/></Icon>;
@@ -92,8 +102,7 @@
         const Award = ({className}) => <Icon className={className}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 22 12 20 17 22 15.79 13.88"/></Icon>;
         const BrainCircuit = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><path d="M12 2a4.5 4.5 0 0 0-4.5 4.5v.43a2.5 2.5 0 0 1-2.43 2.55A2.5 2.5 0 0 1 2.5 7.43V7.5a4.5 4.5 0 0 0-4.5-4.5"/><path d="M12 2a4.5 4.5 0 0 1 4.5 4.5v.43a2.5 2.5 0 0 0 2.43 2.55A2.5 2.5 0 0 0 21.5 7.43V7.5a4.5 4.5 0 0 1 4.5-4.5"/><path d="M22 13a2.5 2.5 0 0 1-2.5 2.5h-.43a4.5 4.5 0 0 0-4.07 4.07v.43a2.5 2.5 0 0 1-2.5 2.5"/><path d="M2 13a2.5 2.5 0 0 0 2.5 2.5h.43a4.5 4.5 0 0 1 4.07 4.07v.43a2.5 2.5 0 0 0 2.5 2.5"/><path d="M12 12a2.5 2.5 0 0 0-2.5-2.5h-.43A4.5 4.5 0 0 1 5.07 5.5v-.43A2.5 2.5 0 0 0 2.5 2.5"/><path d="M12 12a2.5 2.5 0 0 1 2.5-2.5h.43A4.5 4.5 0 0 0 18.93 5.5v-.43A2.5 2.5 0 0 1 21.5 2.5"/><circle cx="12" cy="12" r="2"/><path d="M12 14a2.5 2.5 0 0 1 2.5 2.5v.43a4.5 4.5 0 0 0 4.07 4.07h.43a2.5 2.5 0 0 1 2.5 2.5"/><path d="M12 14a2.5 2.5 0 0 0-2.5 2.5v.43a4.5 4.5 0 0 1-4.07 4.07h-.43a2.5 2.5 0 0 0-2.5 2.5"/></Icon>;
 
-
-        // --- Componente Modal (tu código existente) ---
+        // --- Componentes de UI (Modal, Forms, etc. - código existente sin cambios) ---
         const Modal = ({ isOpen, onClose, children }) => {
           if (!isOpen) return null;
           return (
@@ -107,8 +116,6 @@
             </div>
           );
         };
-
-        // --- Componente TaskForm (tu código existente) ---
         const TaskForm = ({ onAddTask, editingTask, onUpdateTask, selectedDate, goals, onClose }) => {
           const [title, setTitle] = useState('');
           const [quadrant, setQuadrant] = useState('do');
@@ -177,8 +184,6 @@
             </form>
           );
         };
-
-        // --- Componente HabitForm (tu código existente) ---
         const HabitForm = ({ onAddHabit, editingHabit, onUpdateHabit, goals, onClose }) => {
             const [name, setName] = useState('');
             const [category, setCategory] = useState('Salud');
@@ -273,8 +278,6 @@
                 </form>
             );
         };
-        
-        // --- Otros componentes (TodayView, PomodoroTimer, etc.) sin cambios ---
         const TodayView = ({ tasks, habits, onUpdateTask, onSetEditingTask, onSetEditingHabit, addXp, onUpdateHabit }) => {
             const todayString = new Date().toISOString().split('T')[0];
             const todaysTasks = tasks.filter(t => t.date === todayString);
@@ -364,7 +367,6 @@
                 </div>
             )
         };
-
         const PomodoroTimer = ({ taskId }) => {
             const [time, setTime] = useState(25 * 60);
             const [isActive, setIsActive] = useState(false);
@@ -399,7 +401,6 @@
                 </div>
             );
         };
-
         const GoalsView = ({ goals, onAddGoal, onDeleteGoal, tasks }) => {
             const [newGoalTitle, setNewGoalTitle] = useState('');
 
@@ -442,7 +443,6 @@
                 </div>
             );
         };
-
         const AchievementsView = ({ achievements }) => {
             return (
                 <div className="p-4">
@@ -459,7 +459,6 @@
                 </div>
             );
         };
-
         const DailyMotivation = () => {
             const quotes = [
                 "El secreto para salir adelante es empezar.", "La disciplina es el puente entre las metas y los logros.", "No tienes que ser grande para empezar, pero tienes que empezar para ser grande.", "Un pequeño progreso cada día suma grandes resultados.", "La clave no es priorizar lo que está en tu agenda, sino agendar tus prioridades."
@@ -485,7 +484,6 @@
                 </div>
             );
         };
-
         const HabitTracker = ({ habits, onSetEditingHabit, onDeleteHabit }) => {
             const getCategoryIcon = (category) => {
                 switch(category) {
@@ -524,44 +522,200 @@
                 </div>
             );
         };
+        
+        // --- INICIO: NUEVOS COMPONENTES DE ESTADÍSTICAS ---
 
-        const StatsView = ({ habits }) => {
+        const CategoryPieChart = ({ habits }) => {
+            const categoryColors = {
+                'Salud': '#4ade80', // green-400
+                'Trabajo': '#60a5fa', // blue-400
+                'Desarrollo Personal': '#facc15', // yellow-400
+                'Ocio': '#c084fc', // purple-400
+                'Default': '#9ca3af', // gray-400
+            };
+
+            const categoryData = useMemo(() => {
+                const data = habits.reduce((acc, habit) => {
+                    if (!habit.progress) return acc;
+                    const category = habit.category || 'Default';
+                    const completedMinutes = Object.values(habit.progress).reduce((sum, status) => {
+                        return sum + (status === 1 ? (habit.duration || 0) : 0);
+                    }, 0);
+                    
+                    if (completedMinutes > 0) {
+                        if (!acc[category]) {
+                            acc[category] = 0;
+                        }
+                        acc[category] += completedMinutes;
+                    }
+                    return acc;
+                }, {});
+                return Object.entries(data).map(([name, value]) => ({ name, value }));
+            }, [habits]);
+
+            const totalValue = useMemo(() => categoryData.reduce((sum, item) => sum + item.value, 0), [categoryData]);
+            
+            if (categoryData.length === 0) {
+                 return (
+                    <div className="flex flex-col items-center justify-center h-full p-4">
+                        <p className="text-gray-500">Completa hábitos para ver la distribución de tiempo.</p>
+                    </div>
+                );
+            }
+
+            let cumulativePercent = 0;
+            const slices = categoryData.map(item => {
+                const percent = item.value / totalValue;
+                const slice = {
+                    percent,
+                    color: categoryColors[item.name] || categoryColors['Default']
+                };
+                cumulativePercent += percent;
+                return slice;
+            });
+            
+            const PieSlice = ({ slice, radius, startPercent }) => {
+                const startAngle = startPercent * 2 * Math.PI;
+                const endAngle = (startPercent + slice.percent) * 2 * Math.PI;
+                const largeArcFlag = slice.percent > 0.5 ? 1 : 0;
+                
+                const x1 = radius + radius * Math.cos(startAngle);
+                const y1 = radius + radius * Math.sin(startAngle);
+                const x2 = radius + radius * Math.cos(endAngle);
+                const y2 = radius + radius * Math.sin(endAngle);
+
+                const d = `M ${radius},${radius} L ${x1},${y1} A ${radius},${radius} 0 ${largeArcFlag} 1 ${x2},${y2} Z`;
+
+                return <path d={d} fill={slice.color} />;
+            };
+
+            return (
+                <div className="flex flex-col lg:flex-row items-center gap-4 h-full">
+                    <div className="relative w-40 h-40">
+                         <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                             {(() => {
+                                 let runningTotal = 0;
+                                 return slices.map((slice, i) => {
+                                     const start = runningTotal;
+                                     runningTotal += slice.percent;
+                                     return <PieSlice key={i} slice={slice} radius={50} startPercent={start} />;
+                                 });
+                             })()}
+                         </svg>
+                    </div>
+                    <ul className="space-y-1 text-sm">
+                        {categoryData.map(item => (
+                            <li key={item.name} className="flex items-center gap-2">
+                                <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: categoryColors[item.name] || categoryColors['Default'] }}></span>
+                                <span className="text-gray-300">{item.name}:</span>
+                                <span className="font-bold text-white">{item.value} min</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            );
+        };
+
+        const HabitHeatmap = ({ habit }) => {
+            const today = new Date();
+            const yearAgo = new Date(today);
+            yearAgo.setDate(today.getDate() - 365);
+
+            const days = useMemo(() => {
+                const dayArray = [];
+                let currentDate = new Date(yearAgo);
+                currentDate.setDate(currentDate.getDate() - currentDate.getDay()); // Start from the beginning of the week
+
+                for (let i = 0; i < 371; i++) { // Approx 53 weeks
+                    dayArray.push(new Date(currentDate));
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                return dayArray;
+            }, [yearAgo]);
+
+            const monthLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+            const getMonthLabel = (date, prevDate) => {
+                if (!prevDate || date.getMonth() !== prevDate.getMonth()) {
+                    return <p className="text-xs text-gray-500 absolute -top-4">{monthLabels[date.getMonth()]}</p>;
+                }
+                return null;
+            }
+
+            if (!habit || !habit.progress) {
+                return <div className="text-gray-500 p-4">Selecciona un hábito para ver su mapa de calor.</div>
+            }
+
+            return (
+                 <div className="overflow-x-auto p-2">
+                    <div className="grid grid-rows-7 grid-flow-col gap-1" style={{gridTemplateColumns: 'repeat(53, minmax(0, 1fr))'}}>
+                        {days.map((day, index) => {
+                            const dateString = day.toDateString();
+                            const isCompleted = (habit.progress[dateString] || 0) >= 1;
+                             const colorClass = isCompleted ? 'bg-green-500' : 'bg-gray-700';
+                             const isInFuture = day > today;
+
+                            return (
+                                <div key={index} className="relative heatmap-cell">
+                                    <div
+                                        className={`w-3 h-3 rounded-sm ${isInFuture ? 'bg-gray-800' : colorClass}`}
+                                    ></div>
+                                    {!isInFuture && 
+                                        <div className="tooltip absolute z-10 -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded-md shadow-lg w-max">
+                                            {dateString} - {isCompleted ? 'Completado' : 'No completado'}
+                                        </div>
+                                    }
+                                </div>
+                            )
+                        })}
+                    </div>
+                 </div>
+            );
+        };
+        
+        const AdvancedStatsView = ({ habits }) => {
             const [selectedHabitId, setSelectedHabitId] = useState('');
+            const [dateRange, setDateRange] = useState('all_time'); // 'week', 'month', 'all_time'
 
             useEffect(() => {
                 if(habits.length > 0 && !selectedHabitId) {
                     setSelectedHabitId(habits[0].id);
+                } else if (habits.length === 0) {
+                    setSelectedHabitId('');
                 }
-            }, [habits, selectedHabitId]);
+            }, [habits]);
 
             const selectedHabit = habits.find(h => h.id === selectedHabitId);
 
-            const calculateStats = useCallback((habit) => {
-                if (!habit || !habit.progress) return { streak: 0, bestStreak: 0, successRate: 0, chartData: [] };
-                
-                let currentStreak = 0;
-                let bestStreak = 0;
-                let completedDays = 0;
-                let totalDaysSinceStart = 0;
-                const chartData = [];
+            const calculateStats = useCallback((habit, range) => {
+                if (!habit || !habit.progress || !habit.startDate) return { streak: 0, bestStreak: 0, successRate: 0 };
                 
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
 
-                if (!habit.startDate) {
-                     return { streak: 0, bestStreak: 0, successRate: 0, chartData: [] };
+                let rangeStartDate = new Date(habit.startDate);
+                rangeStartDate.setHours(0, 0, 0, 0);
+
+                if (range === 'week') {
+                    rangeStartDate = new Date(today);
+                    rangeStartDate.setDate(today.getDate() - 6);
+                } else if (range === 'month') {
+                    rangeStartDate = new Date(today);
+                    rangeStartDate.setMonth(today.getMonth() - 1);
                 }
 
-                const startDate = new Date(habit.startDate);
-                startDate.setHours(0, 0, 0, 0);
-
-                let tempDate = new Date(startDate);
+                let currentStreak = 0;
+                let bestStreak = 0;
+                let completedDays = 0;
+                let totalApplicableDays = 0;
+                
+                let tempDate = new Date(rangeStartDate);
 
                 while(tempDate <= today) {
                     const isHabitDay = habit.frequencyPeriod === 'Día' || (habit.frequencyPeriod === 'Semana' && (habit.selectedDays || []).includes(tempDate.getDay()));
                     
                     if(isHabitDay) {
-                        totalDaysSinceStart++;
+                        totalApplicableDays++;
                         const dateString = tempDate.toDateString();
                         const isCompleted = (habit.progress[dateString] || 0) >= 1;
 
@@ -577,73 +731,65 @@
                 }
                 bestStreak = Math.max(bestStreak, currentStreak);
 
-                for (let i = 6; i >= 0; i--) {
-                    const date = new Date();
-                    date.setDate(today.getDate() - i);
-                    const dateString = date.toDateString();
-                    const isCompleted = (habit.progress[dateString] || 0) >= 1;
-                    chartData.push({ name: date.toLocaleDateString('es-ES', { weekday: 'short' }), success: isCompleted ? 100 : 0 });
-                }
+                const successRate = totalApplicableDays > 0 ? Math.round((completedDays / totalApplicableDays) * 100) : 0;
 
-                const successRate = totalDaysSinceStart > 0 ? Math.round((completedDays / totalDaysSinceStart) * 100) : 0;
-
-                return { streak: currentStreak, bestStreak, successRate, chartData };
+                return { streak: currentStreak, bestStreak, successRate };
             }, []);
 
-            const stats = selectedHabit ? calculateStats(selectedHabit) : null;
+            const stats = selectedHabit ? calculateStats(selectedHabit, dateRange) : null;
             
             return (
-                <div className="p-4">
-                    <h2 className="text-3xl font-bold text-white mb-6 flex items-center"><BarChart2 className="mr-3 text-indigo-400" /> Estadísticas</h2>
-                    <select value={selectedHabitId} onChange={(e) => setSelectedHabitId(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 mb-6">
-                        <option value="" disabled>Selecciona un hábito</option>
-                        {habits.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
-                    </select>
-
-                    {selectedHabit && stats ? (
-                        <div className="bg-gray-800 p-4 rounded-2xl space-y-6">
-                            <div>
-                                <h3 className="text-xl font-bold text-white mb-4">{selectedHabit.name}</h3>
-                                <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="p-4 space-y-6">
+                    <h2 className="text-3xl font-bold text-white flex items-center"><BarChart2 className="mr-3 text-indigo-400" /> Dashboard de Estadísticas</h2>
+                    
+                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-gray-800 p-6 rounded-2xl space-y-4">
+                             <h3 className="text-xl font-bold text-white">Rendimiento por Hábito</h3>
+                             <select value={selectedHabitId} onChange={(e) => setSelectedHabitId(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 mb-2">
+                                 <option value="" disabled>Selecciona un hábito</option>
+                                 {habits.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+                             </select>
+                            <div className="flex gap-2">
+                                <button onClick={() => setDateRange('week')} className={`px-3 py-1 text-sm rounded-md ${dateRange === 'week' ? 'bg-indigo-600' : 'bg-gray-600'}`}>Semana</button>
+                                <button onClick={() => setDateRange('month')} className={`px-3 py-1 text-sm rounded-md ${dateRange === 'month' ? 'bg-indigo-600' : 'bg-gray-600'}`}>Mes</button>
+                                <button onClick={() => setDateRange('all_time')} className={`px-3 py-1 text-sm rounded-md ${dateRange === 'all_time' ? 'bg-indigo-600' : 'bg-gray-600'}`}>Todo</button>
+                            </div>
+                             {selectedHabit && stats ? (
+                                <div className="grid grid-cols-3 gap-4 text-center pt-4">
                                     <div>
-                                        <p className="text-2xl font-bold text-green-400">{stats.streak}</p>
+                                        <p className="text-3xl font-bold text-green-400">{stats.streak}</p>
                                         <p className="text-sm text-gray-400">Racha Actual</p>
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-orange-400">{stats.bestStreak}</p>
+                                        <p className="text-3xl font-bold text-orange-400">{stats.bestStreak}</p>
                                         <p className="text-sm text-gray-400">Mejor Racha</p>
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-blue-400">{stats.successRate}%</p>
+                                        <p className="text-3xl font-bold text-blue-400">{stats.successRate}%</p>
                                         <p className="text-sm text-gray-400">Tasa de Éxito</p>
                                     </div>
                                 </div>
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-white mb-2">Progreso Últimos 7 Días</h4>
-                                <div className="flex justify-around items-end h-40 bg-gray-700 p-4 rounded-lg">
-                                    {stats.chartData.map((day, index) => (
-                                        <div key={index} className="flex flex-col items-center flex-1">
-                                            <div className="w-full h-full flex items-end justify-center">
-                                               <div className="w-6 bg-gray-600 rounded-t-md" style={{height: '100%'}}>
-                                                    <div className={`bg-indigo-500 rounded-t-md w-full transition-all duration-500`} style={{height: `${day.success}%`}}></div>
-                                               </div>
-                                            </div>
-                                            <p className="text-xs text-gray-400 mt-1">{day.name}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                             ) : (
+                                <p className="text-gray-500 text-center py-8">Selecciona un hábito para ver sus métricas.</p>
+                             )}
                         </div>
-                    ) : (
-                         <p className="text-gray-500 text-center py-8">Selecciona un hábito para ver tus estadísticas o crea uno nuevo.</p>
-                    )}
+                        <div className="bg-gray-800 p-6 rounded-2xl">
+                             <h3 className="text-xl font-bold text-white mb-4">Inversión de Tiempo por Categoría</h3>
+                             <CategoryPieChart habits={habits} />
+                        </div>
+                    </div>
+                     <div className="bg-gray-800 p-6 rounded-2xl">
+                        <h3 className="text-xl font-bold text-white mb-4">Mapa de Calor de Hábitos (Último Año)</h3>
+                        <HabitHeatmap habit={selectedHabit} />
+                     </div>
+
+                    {habits.length === 0 && <p className="text-gray-500 text-center py-8">Crea y completa hábitos para ver tus estadísticas.</p>}
                 </div>
             );
         };
+        // --- FIN: NUEVOS COMPONENTES DE ESTADÍSTICAS ---
 
-
-        // Nuevo componente de Autenticación
+        // --- Componente de Autenticación (código existente sin cambios) ---
         const AuthView = ({ onLoginSuccess }) => {
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
@@ -748,7 +894,7 @@
             );
         };
         
-        // --- CÓDIGO CORREGIDO ---
+        // --- Componente Principal App (lógica existente con pequeños ajustes) ---
         function App() {
           const [currentUser, setCurrentUser] = useState(null);
           const [loadingAuth, setLoadingAuth] = useState(true);
@@ -778,7 +924,6 @@
                   if (user) {
                       console.log("Usuario autenticado:", user.uid);
                       loadUserProfile(user.uid);
-                      // Los listeners de datos se manejan en el siguiente useEffect
                   } else {
                       console.log("No hay usuario autenticado.");
                       setTasks([]);
@@ -862,8 +1007,7 @@
                   };
               }
           }, [currentUser, loadUserTasks, loadUserHabits, loadUserGoals]);
-
-          // --- INICIO DE LA SOLUCIÓN: Funciones que faltaban ---
+          
           const handleSetEditingTask = (task) => {
             setEditingTask(task);
             setTaskModalOpen(true);
@@ -873,7 +1017,6 @@
             setEditingHabit(habit);
             setHabitModalOpen(true);
           };
-          // --- FIN DE LA SOLUCIÓN ---
           
           const handleAddTask = async (taskData) => {
             if (!currentUser) return;
@@ -992,7 +1135,8 @@
               case 'goals':
                 return <GoalsView goals={goals} onAddGoal={handleAddGoal} onDeleteGoal={handleDeleteGoal} tasks={tasks} />;
               case 'stats':
-                return <StatsView habits={habits} />;
+                // --- CAMBIO: Renderizar el nuevo componente de estadísticas ---
+                return <AdvancedStatsView habits={habits} />;
               case 'achievements':
                 return <AchievementsView achievements={achievements} />;
               default:
@@ -1063,4 +1207,3 @@
     </script>
 </body>
 </html>
-```
