@@ -76,7 +76,7 @@
         const Trash2 = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></Icon>;
         const Edit = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>;
         const Zap = ({className}) => <Icon className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>;
-        const BookOpen = ({className}) => <Icon className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>;
+        const BookOpen = ({className}) => <Icon className className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>;
         const Dumbbell = ({className}) => <Icon className={className}><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/><path d="m21.5 2.5-6.364 6.364"/><path d="M5.343 2.515a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829L6.364 12.78l-1.768-1.767a2 2 0 1 1-2.828-2.829z"/><path d="m2.5 21.5 6.364-6.364"/></Icon>;
         const TrendingUp = ({className}) => <Icon className={className}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></Icon>;
         const Home = ({className}) => <Icon className={className}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>;
@@ -1092,40 +1092,6 @@
           }
 
           // Si hay un usuario autenticado, muestra la aplicación principal
-          const renderView = () => {
-            switch (activeView) {
-              case 'today':
-                return <TodayView 
-                    tasks={tasks} 
-                    habits={habits} 
-                    onUpdateTask={handleUpdateTask} 
-                    onUpdateHabit={handleUpdateHabit} 
-                    onSetEditingTask={handleSetEditingTask} 
-                    onSetEditingHabit={handleSetEditingHabit} 
-                    addXp={addXp} 
-                />;
-              case 'habits':
-                return <HabitTracker habits={habits} onSetEditingHabit={handleSetEditingHabit} onDeleteHabit={handleDeleteHabit} />;
-              case 'goals':
-                return <GoalsView goals={goals} onAddGoal={handleAddGoal} onDeleteGoal={handleDeleteGoal} tasks={tasks} />;
-              case 'stats':
-                return <StatsView habits={habits} />;
-              case 'achievements':
-                return <AchievementsView achievements={achievements} />;
-              default:
-                // SOLUCIÓN: Asegúrate de que el default case también pase TODAS las props necesarias a TodayView
-                return <TodayView 
-                    tasks={tasks} 
-                    habits={habits} 
-                    onUpdateTask={handleUpdateTask} 
-                    onUpdateHabit={handleUpdateHabit} // <-- Añadido
-                    onSetEditingTask={handleSetEditingTask} 
-                    onSetEditingHabit={handleSetEditingHabit} // <-- Añadido
-                    addXp={addXp} 
-                />;
-            }
-          };
-
           return (
             <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col md:flex-row">
               <nav className="w-full md:w-20 lg:w-64 bg-gray-800 p-2 md:p-4 flex md:flex-col justify-between border-b-2 md:border-b-0 md:border-r-2 border-gray-700">
@@ -1165,7 +1131,42 @@
               </nav>
 
               <main className="flex-1 overflow-y-auto">
-                {renderView()}
+                {/* SOLUCIÓN: Integrar la lógica del switch directamente aquí */}
+                {activeView === 'today' && (
+                    <TodayView 
+                        tasks={tasks} 
+                        habits={habits} 
+                        onUpdateTask={handleUpdateTask} 
+                        onUpdateHabit={handleUpdateHabit} 
+                        onSetEditingTask={handleSetEditingTask} 
+                        onSetEditingHabit={handleSetEditingHabit} 
+                        addXp={addXp} 
+                    />
+                )}
+                {activeView === 'habits' && (
+                    <HabitTracker habits={habits} onSetEditingHabit={handleSetEditingHabit} onDeleteHabit={handleDeleteHabit} />
+                )}
+                {activeView === 'goals' && (
+                    <GoalsView goals={goals} onAddGoal={handleAddGoal} onDeleteGoal={handleDeleteGoal} tasks={tasks} />
+                )}
+                {activeView === 'stats' && (
+                    <StatsView habits={habits} />
+                )}
+                {activeView === 'achievements' && (
+                    <AchievementsView achievements={achievements} />
+                )}
+                {/* Si no hay vista activa o si se quiere un fallback */}
+                {activeView !== 'today' && activeView !== 'habits' && activeView !== 'goals' && activeView !== 'stats' && activeView !== 'achievements' && (
+                    <TodayView 
+                        tasks={tasks} 
+                        habits={habits} 
+                        onUpdateTask={handleUpdateTask} 
+                        onUpdateHabit={handleUpdateHabit} 
+                        onSetEditingTask={handleSetEditingTask} 
+                        onSetEditingHabit={handleSetEditingHabit} 
+                        addXp={addXp} 
+                    />
+                )}
               </main>
               
               <div className="md:hidden fixed bottom-4 right-4 flex flex-col gap-3 z-40">
