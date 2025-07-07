@@ -1,658 +1,145 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HabitGus - Aplicación de Productividad</title>
-    
-    <!-- 1. Carga de Tailwind CSS para los estilos -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. Carga de las librerías de React y ReactDOM -->
-    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-    
-    <!-- 3. Carga de Babel para transpilar JSX en el navegador -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <style>
-        /* Estilos personalizados para la animación del modal */
-        @keyframes fade-in-up {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .animate-fade-in-up {
-            animation: fade-in-up 0.3s ease-out forwards;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
-     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
-
 </head>
 <body class="bg-gray-900">
-    <!-- El contenedor donde se montará la aplicación de React -->
     <div id="root"></div>
 
-    <!-- 4. Tu código de React. El type="text/babel" le indica a Babel que lo transpile -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyB7l1uu25Rs4R5cWwUnh0Aohedwi8r3lKw",
+        authDomain: "habitgus.firebaseapp.com",
+        projectId: "habitgus",
+        storageBucket: "habitgus.firebasestorage.app",
+        messagingSenderId: "209155294095",
+        appId: "1:209155294095:web:419be1d3157b88544781fa"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+      const auth = firebase.auth();
+      console.log("Firebase inicializado y servicios disponibles:", db, auth);
+    </script>
     <script type="text/babel">
         const { useState, useEffect, useCallback } = React;
 
-        // --- Iconos SVG como Componentes ---
-        // Se reemplazan los componentes de lucide-react por SVGs en línea para eliminar dependencias.
-        const Icon = ({ children, className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>;
-        const CheckCircle = ({className}) => <Icon className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></Icon>;
-        const Circle = ({className}) => <Icon className={className}><circle cx="12" cy="12" r="10"/></Icon>;
-        const Plus = ({className}) => <Icon className={className}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>;
-        const Trash2 = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></Icon>;
-        const Edit = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>;
-        const Zap = ({className}) => <Icon className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>;
-        const BookOpen = ({className}) => <Icon className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>;
-        const Dumbbell = ({className}) => <Icon className={className}><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z"/><path d="m21.5 2.5-6.364 6.364"/><path d="M5.343 2.515a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829L6.364 12.78l-1.768-1.767a2 2 0 1 1-2.828-2.829z"/><path d="m2.5 21.5 6.364-6.364"/></Icon>;
-        const TrendingUp = ({className}) => <Icon className={className}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></Icon>;
-        const Home = ({className}) => <Icon className={className}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>;
-        const Clock = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>;
-        const Repeat = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><path d="M17 2.1l4 4-4 4"/><path d="M3 12.6V13a8 8 0 0 0 16 0V11"/><path d="M3 21.9l4-4-4-4"/><path d="M21 11.4V11a8 8 0 0 0-16 0v1.4"/></Icon>;
-        const BarChart2 = ({className}) => <Icon className={className}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></Icon>;
-        const Lightbulb = ({className}) => <Icon className={className}><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></Icon>;
-        const Trophy = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></Icon>;
-        const PlayCircle = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></Icon>;
-        const PauseCircle = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></Icon>;
-        const RotateCcw = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><path d="M3 2v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></Icon>;
-        const Target = ({className}) => <Icon className={className}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></Icon>;
-        const Award = ({className}) => <Icon className={className}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 22 12 20 17 22 15.79 13.88"/></Icon>;
-        const BrainCircuit = ({size, className}) => <Icon className={className} style={{width: size, height: size}}><path d="M12 2a4.5 4.5 0 0 0-4.5 4.5v.43a2.5 2.5 0 0 1-2.43 2.55A2.5 2.5 0 0 1 2.5 7.43V7.5a4.5 4.5 0 0 0-4.5-4.5"/><path d="M12 2a4.5 4.5 0 0 1 4.5 4.5v.43a2.5 2.5 0 0 0 2.43 2.55A2.5 2.5 0 0 0 21.5 7.43V7.5a4.5 4.5 0 0 1 4.5-4.5"/><path d="M22 13a2.5 2.5 0 0 1-2.5 2.5h-.43a4.5 4.5 0 0 0-4.07 4.07v.43a2.5 2.5 0 0 1-2.5 2.5"/><path d="M2 13a2.5 2.5 0 0 0 2.5 2.5h.43a4.5 4.5 0 0 1 4.07 4.07v.43a2.5 2.5 0 0 0 2.5 2.5"/><path d="M12 12a2.5 2.5 0 0 0-2.5-2.5h-.43A4.5 4.5 0 0 1 5.07 5.5v-.43A2.5 2.5 0 0 0 2.5 2.5"/><path d="M12 12a2.5 2.5 0 0 1 2.5-2.5h.43A4.5 4.5 0 0 0 18.93 5.5v-.43A2.5 2.5 0 0 1 21.5 2.5"/><circle cx="12" cy="12" r="2"/><path d="M12 14a2.5 2.5 0 0 1 2.5 2.5v.43a4.5 4.5 0 0 0 4.07 4.07h.43a2.5 2.5 0 0 1 2.5 2.5"/><path d="M12 14a2.5 2.5 0 0 0-2.5 2.5v.43a4.5 4.5 0 0 1-4.07 4.07h-.43a2.5 2.5 0 0 0-2.5 2.5"/></Icon>;
+        // ... Tus componentes Icon, CheckCircle, etc. (mantienen igual) ...
 
-        // --- El resto del código de la aplicación es idéntico ---
+        // Nuevo componente de Autenticación
+        const AuthView = ({ onLoginSuccess }) => {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isRegistering, setIsRegistering] = useState(false);
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
 
-        const Modal = ({ isOpen, onClose, children }) => {
-          if (!isOpen) return null;
-          return (
-            <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 overflow-y-auto">
-              <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl p-6 lg:p-8 w-full max-w-md relative animate-fade-in-up my-8">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-200 transition-transform duration-300 hover:scale-125">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-                {children}
-              </div>
-            </div>
-          );
-        };
-
-        const TaskForm = ({ onAddTask, editingTask, onUpdateTask, selectedDate, goals, onClose }) => {
-          const [title, setTitle] = useState('');
-          const [quadrant, setQuadrant] = useState('do');
-          const [date, setDate] = useState('');
-          const [time, setTime] = useState('');
-          const [linkedGoalId, setLinkedGoalId] = useState('');
-
-          useEffect(() => {
-            const initialDate = selectedDate ? new Date(selectedDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-            const initialTime = new Date().toTimeString().slice(0, 5);
-
-            if (editingTask) {
-              setTitle(editingTask.title);
-              setQuadrant(editingTask.quadrant);
-              setDate(editingTask.date || initialDate);
-              setTime(editingTask.time || initialTime);
-              setLinkedGoalId(editingTask.linkedGoalId || '');
-            } else {
-              setTitle('');
-              setQuadrant('do');
-              setDate(initialDate);
-              setTime(initialTime);
-              setLinkedGoalId('');
-            }
-          }, [editingTask, selectedDate]);
-
-          const handleSubmit = (e) => {
-            e.preventDefault();
-            if (!title.trim()) return;
-            const taskData = { title, quadrant, date, time, linkedGoalId };
-            if (editingTask) {
-              onUpdateTask(editingTask.id, taskData);
-            } else {
-              onAddTask(taskData);
-            }
-            onClose();
-          };
-
-          return (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <h3 className="text-xl font-bold text-white">{editingTask ? 'Editar Tarea' : 'Añadir Nueva Tarea'}</h3>
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="¿Cuál es la tarea?" className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:ring-2 focus:ring-indigo-500" />
-              <div className="grid grid-cols-2 gap-4">
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600" />
-                <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-400 mb-1">Vincular a Meta</label>
-                <select value={linkedGoalId} onChange={(e) => setLinkedGoalId(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600">
-                  <option value="">Ninguna</option>
-                  {goals.map(goal => <option key={goal.id} value={goal.id}>{goal.title}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-400 mb-1">Matriz de Eisenhower</label>
-                <select value={quadrant} onChange={(e) => setQuadrant(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600">
-                  <option value="do">Urgente e Importante</option>
-                  <option value="plan">Importante, No Urgente</option>
-                  <option value="delegate">Urgente, No Importante</option>
-                  <option value="eliminate">Ni Urgente, Ni Importante</option>
-                </select>
-              </div>
-              <button type="submit" className="w-full mt-4 p-3 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-lg flex items-center justify-center">
-                <Plus className="mr-2" /> {editingTask ? 'Actualizar Tarea' : 'Añadir Tarea'}
-              </button>
-            </form>
-          );
-        };
-
-        const HabitForm = ({ onAddHabit, editingHabit, onUpdateHabit, goals, onClose }) => {
-            const [name, setName] = useState('');
-            const [category, setCategory] = useState('Salud');
-            const [duration, setDuration] = useState(30);
-            const [frequencyPeriod, setFrequencyPeriod] = useState('Día');
-            const [time, setTime] = useState('08:00');
-            const [selectedDays, setSelectedDays] = useState([]);
-            const [linkedGoalId, setLinkedGoalId] = useState('');
-
-            const weekDays = ["D", "L", "M", "X", "J", "V", "S"];
-
-            useEffect(() => {
-                if (editingHabit) {
-                    setName(editingHabit.name);
-                    setCategory(editingHabit.category);
-                    setDuration(editingHabit.duration || 30);
-                    setFrequencyPeriod(editingHabit.frequencyPeriod || 'Día');
-                    setTime(editingHabit.time || '08:00');
-                    setSelectedDays(editingHabit.selectedDays || []);
-                    setLinkedGoalId(editingHabit.linkedGoalId || '');
-                } else {
-                    setName(''); setCategory('Salud'); setDuration(30);
-                    setFrequencyPeriod('Día'); setTime('08:00'); setSelectedDays([]);
-                    setLinkedGoalId('');
-                }
-            }, [editingHabit]);
-
-            const handleDayToggle = (dayIndex) => {
-                setSelectedDays(prev => prev.includes(dayIndex) ? prev.filter(d => d !== dayIndex) : [...prev, dayIndex]);
-            };
-
-            const handleSubmit = (e) => {
+            const handleAuth = async (e) => {
                 e.preventDefault();
-                if (!name.trim()) return;
-                const habitData = { name, category, duration: Number(duration), frequencyPeriod, time, selectedDays, linkedGoalId, startDate: new Date().toISOString().split('T')[0], progress: editingHabit ? editingHabit.progress : {} };
-                if (editingHabit) {
-                    onUpdateHabit(editingHabit.id, habitData);
-                } else {
-                    onAddHabit(habitData);
-                }
-                onClose();
-            };
-
-            return (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <h3 className="text-xl font-bold text-white">{editingHabit ? 'Editar Hábito' : 'Crear Nuevo Hábito'}</h3>
-                    <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del hábito (Ej: Leer)" className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600" />
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-400 mb-1">Categoría</label>
-                            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600">
-                                <option>Salud</option> <option>Trabajo</option> <option>Desarrollo Personal</option> <option>Ocio</option>
-                            </select>
-                        </div>
-                         <div>
-                            <label className="block text-sm font-semibold text-gray-400 mb-1">Hora</label>
-                            <input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600" />
-                        </div>
-                    </div>
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-400 mb-1">Vincular a Meta</label>
-                        <select value={linkedGoalId} onChange={(e) => setLinkedGoalId(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600">
-                            <option value="">Ninguna</option>
-                            {goals.map(goal => <option key={goal.id} value={goal.id}>{goal.title}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-400 mb-1">Frecuencia</label>
-                        <select value={frequencyPeriod} onChange={e => setFrequencyPeriod(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600">
-                            <option>Día</option><option>Semana</option>
-                        </select>
-                    </div>
-                    {frequencyPeriod === 'Semana' && (
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-400 mb-1">Seleccionar días</label>
-                            <div className="flex justify-around bg-gray-700 p-2 rounded-lg">
-                                {weekDays.map((day, index) => (
-                                    <button key={index} type="button" onClick={() => handleDayToggle(index)} className={`w-8 h-8 rounded-full font-bold transition-colors ${selectedDays.includes(index) ? 'bg-indigo-500 text-white' : 'bg-gray-600 text-gray-300'}`}>
-                                        {day}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                     <div>
-                        <label className="block text-sm font-semibold text-gray-400 mb-1">Duración (minutos)</label>
-                        <input type="number" min="1" value={duration} onChange={e => setDuration(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600" />
-                    </div>
-                    <button type="submit" className="w-full mt-4 p-3 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-lg flex items-center justify-center">
-                        <Plus className="mr-2" /> {editingHabit ? 'Actualizar Hábito' : 'Crear Hábito'}
-                    </button>
-                </form>
-            );
-        };
-
-        const TodayView = ({ tasks, habits, onUpdateTask, onSetEditingTask, onSetEditingHabit, addXp, onUpdateHabit }) => {
-            const todayString = new Date().toISOString().split('T')[0];
-            const todaysTasks = tasks.filter(t => t.date === todayString);
-            
-            const todaysHabits = habits.filter(habit => {
-                const todayDate = new Date();
-                todayDate.setHours(0,0,0,0);
-                if (!habit.startDate) return false;
-                const startDate = new Date(habit.startDate);
-                startDate.setHours(0,0,0,0);
-                if (todayDate < startDate) return false;
-                if (habit.frequencyPeriod === 'Día') return true;
-                if (habit.frequencyPeriod === 'Semana') {
-                    const currentDay = todayDate.getDay();
-                    return (habit.selectedDays || []).includes(currentDay);
-                }
-                return false;
-            });
-            
-            const combined = [
-                ...todaysTasks.map(t => ({...t, type: 'task'})),
-                ...todaysHabits.map(h => ({...h, type: 'habit'}))
-            ].sort((a, b) => (a.time || '23:59').localeCompare(b.time || '23:59'));
-
-            const [pomodoroTaskId, setPomodoroTaskId] = useState(null);
-
-            const handleTaskComplete = (task) => {
-                if (!task.completed) {
-                    addXp(10);
-                }
-                onUpdateTask(task.id, { completed: !task.completed });
-            };
-
-            const handleHabitComplete = (habit) => {
-                const today = new Date().toDateString();
-                const isCompleted = isHabitCompletedToday(habit);
-                const updatedProgress = {
-                    ...habit.progress,
-                    [today]: isCompleted ? 0 : 1
-                };
-                if (!isCompleted) {
-                    addXp(5);
-                }
-                onUpdateHabit(habit.id, { progress: updatedProgress });
-            };
-
-            const isHabitCompletedToday = (habit) => {
-                const today = new Date().toDateString();
-                return (habit.progress && habit.progress[today] || 0) >= 1;
-            };
-
-            return (
-                <div className="p-4 space-y-4">
-                    <DailyMotivation />
-                    <h2 className="text-3xl font-bold text-white">Hoy</h2>
-                    {combined.map(item => (
-                        <div key={`${item.type}-${item.id}`} className="bg-gray-800 p-4 rounded-2xl flex items-center gap-4">
-                            {item.type === 'task' ? (
-                                <>
-                                    <button onClick={() => handleTaskComplete(item)}>{item.completed ? <CheckCircle className="text-green-400" /> : <Circle className="text-gray-500" />}</button>
-                                    <div className="flex-grow">
-                                        <p className={`text-white ${item.completed ? 'line-through text-gray-500' : ''}`}>{item.title}</p>
-                                        <p className="text-sm text-gray-400">Tarea • {item.time}</p>
-                                    </div>
-                                     <button onClick={() => setPomodoroTaskId(pomodoroTaskId === item.id ? null : item.id)} className="p-1 text-gray-400 hover:text-indigo-400">
-                                        <Clock size={18}/>
-                                    </button>
-                                    <button onClick={() => onSetEditingTask(item)} className="p-1 text-gray-400 hover:text-blue-400"><Edit size={18}/></button>
-                                </>
-                            ) : (
-                                <>
-                                    <Dumbbell className="text-indigo-400"/>
-                                     <div className="flex-grow">
-                                        <p className="text-white">{item.name}</p>
-                                        <p className="text-sm text-gray-400">Hábito • {item.time} • {item.duration} min</p>
-                                    </div>
-                                    <button onClick={() => handleHabitComplete(item)} className="p-1 text-gray-400 hover:text-green-400">
-                                        {isHabitCompletedToday(item) ? <CheckCircle className="text-green-400" size={18}/> : <Circle className="text-gray-500" size={18}/>}
-                                    </button>
-                                    <button onClick={() => onSetEditingHabit(item)} className="p-1 text-gray-400 hover:text-blue-400"><Edit size={18}/></button>
-                                </>
-                            )}
-                        </div>
-                    ))}
-                    {combined.length === 0 && <p className="text-gray-500 text-center py-8">Nada para hoy. ¡Añade tareas o hábitos!</p>}
-                    {pomodoroTaskId && <PomodoroTimer taskId={pomodoroTaskId} />}
-                </div>
-            )
-        };
-
-        const PomodoroTimer = ({ taskId }) => {
-            const [time, setTime] = useState(25 * 60);
-            const [isActive, setIsActive] = useState(false);
-
-            useEffect(() => {
-                let interval = null;
-                if (isActive && time > 0) {
-                    interval = setInterval(() => {
-                        setTime(t => t - 1);
-                    }, 1000);
-                } else if (time === 0) {
-                    setIsActive(false);
-                }
-                return () => clearInterval(interval);
-            }, [isActive, time]);
-
-            const minutes = Math.floor(time / 60);
-            const seconds = time % 60;
-
-            return (
-                <div className="bg-gray-700 p-4 rounded-2xl mt-2 text-center">
-                    <p className="text-lg font-bold text-white">Modo Enfoque</p>
-                    <p className="text-5xl font-mono text-indigo-400 my-4">{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</p>
-                    <div className="flex justify-center gap-4">
-                        <button onClick={() => setIsActive(!isActive)} className="p-2 text-white">
-                            {isActive ? <PauseCircle size={32}/> : <PlayCircle size={32}/>}
-                        </button>
-                        <button onClick={() => { setIsActive(false); setTime(25*60); }} className="p-2 text-white">
-                            <RotateCcw size={32}/>
-                        </button>
-                    </div>
-                </div>
-            );
-        };
-
-        const GoalsView = ({ goals, onAddGoal, onDeleteGoal, tasks }) => {
-            const [newGoalTitle, setNewGoalTitle] = useState('');
-
-            const handleAddGoal = (e) => {
-                e.preventDefault();
-                if (newGoalTitle.trim()) {
-                    onAddGoal({ title: newGoalTitle.trim() });
-                    setNewGoalTitle('');
-                }
-            };
-            
-            return (
-                <div className="p-4">
-                    <h2 className="text-3xl font-bold text-white mb-6 flex items-center"><Target className="mr-3 text-indigo-400" /> Metas Estratégicas</h2>
-                    <form onSubmit={handleAddGoal} className="flex gap-2 mb-6">
-                        <input type="text" value={newGoalTitle} onChange={e => setNewGoalTitle(e.target.value)} placeholder="Nueva meta trimestral/anual" className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600"/>
-                        <button type="submit" className="p-3 bg-indigo-600 text-white rounded-lg font-bold"><Plus/></button>
-                    </form>
-                    <div className="space-y-4">
-                        {goals.map(goal => {
-                            const linkedTasks = tasks.filter(t => t.linkedGoalId === String(goal.id));
-                            const completedTasks = linkedTasks.filter(t => t.completed).length;
-                            const progress = linkedTasks.length > 0 ? (completedTasks / linkedTasks.length) * 100 : 0;
-
-                            return (
-                                <div key={goal.id} className="bg-gray-800 p-4 rounded-2xl">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <span className="font-bold text-lg text-white">{goal.title}</span>
-                                        <button onClick={() => onDeleteGoal(goal.id)} className="p-1 text-gray-400 hover:text-red-400"><Trash2 size={18}/></button>
-                                    </div>
-                                    <p className="text-sm text-gray-400 mb-2">{completedTasks} de {linkedTasks.length} tareas completadas</p>
-                                    <div className="w-full bg-gray-700 rounded-full h-2.5">
-                                        <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                         {goals.length === 0 && <p className="text-gray-500 text-center py-8">Define tus grandes objetivos para dar dirección a tus tareas.</p>}
-                    </div>
-                </div>
-            );
-        };
-
-        const AchievementsView = ({ achievements }) => {
-            return (
-                <div className="p-4">
-                    <h2 className="text-3xl font-bold text-white mb-6 flex items-center"><Trophy size={24} className="mr-3 text-yellow-400" /> Logros Desbloqueados</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {achievements.map(ach => (
-                             <div key={ach.id} className={`bg-gray-800 p-4 rounded-2xl text-center flex flex-col items-center justify-center aspect-square transition-all duration-300 ${ach.unlocked ? 'opacity-100 transform scale-100' : 'opacity-40'}`}>
-                                <Trophy size={48} className={ach.unlocked ? 'text-yellow-400' : 'text-gray-500'}/>
-                                <h3 className="font-bold text-white mt-2">{ach.title}</h3>
-                                <p className="text-xs text-gray-400">{ach.description}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        const DailyMotivation = () => {
-            const quotes = [
-                "El secreto para salir adelante es empezar.", "La disciplina es el puente entre las metas y los logros.", "No tienes que ser grande para empezar, pero tienes que empezar para ser grande.", "Un pequeño progreso cada día suma grandes resultados.", "La clave no es priorizar lo que está en tu agenda, sino agendar tus prioridades."
-            ];
-            const tips = [
-                "Regla de los 2 minutos: Si una tarea toma menos de dos minutos, hazla ahora.", "Acumulación de hábitos: Después de un hábito actual, haz un nuevo hábito.", "Diseña tu entorno: Haz las señales de los buenos hábitos obvias y visibles.", "Agrupación de tentaciones: Vincula una acción que quieres hacer con una que necesitas hacer.", "Nunca te saltes dos veces: Si fallas un día, intenta volver a la normalidad lo antes posible."
-            ];
-
-            const [dailyQuote] = useState(() => quotes[Math.floor(Math.random() * quotes.length)]);
-            const [dailyTip] = useState(() => tips[Math.floor(Math.random() * tips.length)]);
-
-            return (
-                <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 p-4 rounded-2xl space-y-3">
-                    <div className="flex items-start gap-3">
-                        <Zap className="text-yellow-400 flex-shrink-0 mt-1"/>
-                        <p className="text-white italic">"{dailyQuote}"</p>
-                    </div>
-                    <div className="border-t border-gray-700 my-2"></div>
-                    <div className="flex items-start gap-3">
-                        <Lightbulb className="text-blue-400 flex-shrink-0 mt-1"/>
-                        <p className="text-gray-300"><span className="font-bold">Tip:</span> {dailyTip}</p>
-                    </div>
-                </div>
-            );
-        };
-
-        const HabitTracker = ({ habits, onSetEditingHabit, onDeleteHabit }) => {
-            const getCategoryIcon = (category) => {
-                switch(category) {
-                    case 'Salud': return <Dumbbell className="text-green-400" />;
-                    case 'Trabajo': return <TrendingUp className="text-blue-400" />;
-                    case 'Desarrollo Personal': return <BookOpen className="text-yellow-400" />;
-                    case 'Ocio': return <Home className="text-purple-400" />;
-                    default: return <Award className="text-gray-400" />;
-                }
-            };
-
-            return (
-                <div className="p-4">
-                    <h2 className="text-3xl font-bold text-white mb-6 flex items-center"><Award className="mr-3 text-indigo-400" /> Mis Hábitos</h2>
-                    <div className="space-y-4">
-                        {habits.map(habit => (
-                            <div key={habit.id} className="bg-gray-800 p-4 rounded-2xl">
-                                <div className="flex justify-between items-center mb-3">
-                                    <div className="flex items-center gap-3">
-                                        {getCategoryIcon(habit.category)}
-                                        <span className="font-bold text-lg text-white">{habit.name}</span>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => onSetEditingHabit(habit)} className="p-1 text-gray-400 hover:text-blue-400"><Edit size={18}/></button>
-                                        <button onClick={() => onDeleteHabit(habit.id)} className="p-1 text-gray-400 hover:text-red-400"><Trash2 size={18}/></button>
-                                    </div>
-                                </div>
-                                <div className="text-sm text-gray-400 mb-3 flex items-center gap-4">
-                                    <span className="flex items-center gap-1"><Repeat size={14}/> {habit.frequencyPeriod === 'Día' ? 'Diario' : `${(habit.selectedDays || []).length} días/sem`}</span>
-                                    <span className="flex items-center gap-1"><Clock size={14}/> {habit.duration} min</span>
-                                </div>
-                            </div>
-                        ))}
-                        {habits.length === 0 && <p className="text-gray-500 text-center py-8">Crea hábitos para construir la vida que deseas, un día a la vez.</p>}
-                    </div>
-                </div>
-            );
-        };
-
-        const StatsView = ({ habits }) => {
-            const [selectedHabitId, setSelectedHabitId] = useState('');
-
-            useEffect(() => {
-                if(habits.length > 0 && !selectedHabitId) {
-                    setSelectedHabitId(habits[0].id);
-                }
-            }, [habits, selectedHabitId]);
-
-            const selectedHabit = habits.find(h => h.id === selectedHabitId);
-
-            const calculateStats = useCallback((habit) => {
-                if (!habit || !habit.progress) return { streak: 0, bestStreak: 0, successRate: 0, chartData: [] };
-                
-                let currentStreak = 0;
-                let bestStreak = 0;
-                let completedDays = 0;
-                let totalDaysSinceStart = 0;
-                const chartData = [];
-                
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-
-                if (!habit.startDate) {
-                     return { streak: 0, bestStreak: 0, successRate: 0, chartData: [] };
-                }
-
-                const startDate = new Date(habit.startDate);
-                startDate.setHours(0, 0, 0, 0);
-
-                let tempDate = new Date(startDate);
-
-                while(tempDate <= today) {
-                    const isHabitDay = habit.frequencyPeriod === 'Día' || (habit.frequencyPeriod === 'Semana' && (habit.selectedDays || []).includes(tempDate.getDay()));
-                    
-                    if(isHabitDay) {
-                        totalDaysSinceStart++;
-                        const dateString = tempDate.toDateString();
-                        const isCompleted = (habit.progress[dateString] || 0) >= 1;
-
-                        if(isCompleted) {
-                            completedDays++;
-                            currentStreak++;
-                        } else {
-                            bestStreak = Math.max(bestStreak, currentStreak);
-                            currentStreak = 0;
-                        }
+                setError('');
+                setLoading(true);
+                try {
+                    if (isRegistering) {
+                        await auth.createUserWithEmailAndPassword(email, password);
+                        console.log("Usuario registrado con éxito");
+                    } else {
+                        await auth.signInWithEmailAndPassword(email, password);
+                        console.log("Sesión iniciada con éxito");
                     }
-                    tempDate.setDate(tempDate.getDate() + 1);
+                    // onLoginSuccess es llamado por el useEffect en App cuando auth.currentUser cambia
+                } catch (err) {
+                    console.error("Error de autenticación:", err.code, err.message);
+                    if (err.code === 'auth/email-already-in-use') {
+                        setError('El correo electrónico ya está en uso. Intenta iniciar sesión.');
+                    } else if (err.code === 'auth/invalid-email') {
+                        setError('Formato de correo electrónico inválido.');
+                    } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+                        setError('Correo o contraseña incorrectos.');
+                    } else if (err.code === 'auth/weak-password') {
+                        setError('La contraseña debe tener al menos 6 caracteres.');
+                    } else {
+                        setError(`Error: ${err.message}`);
+                    }
+                } finally {
+                    setLoading(false);
                 }
-                bestStreak = Math.max(bestStreak, currentStreak);
+            };
 
-                for (let i = 6; i >= 0; i--) {
-                    const date = new Date();
-                    date.setDate(today.getDate() - i);
-                    const dateString = date.toDateString();
-                    const isCompleted = (habit.progress[dateString] || 0) >= 1;
-                    chartData.push({ name: date.toLocaleDateString('es-ES', { weekday: 'short' }), success: isCompleted ? 100 : 0 });
-                }
-
-                const successRate = totalDaysSinceStart > 0 ? Math.round((completedDays / totalDaysSinceStart) * 100) : 0;
-
-                return { streak: currentStreak, bestStreak, successRate, chartData };
-            }, []);
-
-            const stats = selectedHabit ? calculateStats(selectedHabit) : null;
-            
             return (
-                <div className="p-4">
-                    <h2 className="text-3xl font-bold text-white mb-6 flex items-center"><BarChart2 className="mr-3 text-indigo-400" /> Estadísticas</h2>
-                    <select value={selectedHabitId} onChange={(e) => setSelectedHabitId(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 mb-6">
-                        <option value="" disabled>Selecciona un hábito</option>
-                        {habits.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
-                    </select>
-
-                    {selectedHabit && stats ? (
-                        <div className="bg-gray-800 p-4 rounded-2xl space-y-6">
+                <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
+                    <div className="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700">
+                        <h2 className="text-3xl font-bold text-white text-center mb-6">
+                            <BrainCircuit size={48} className="inline-block mr-3 text-indigo-400"/>
+                            HabitGus
+                        </h2>
+                        <form onSubmit={handleAuth} className="space-y-5">
                             <div>
-                                <h3 className="text-xl font-bold text-white mb-4">{selectedHabit.name}</h3>
-                                <div className="grid grid-cols-3 gap-4 text-center">
-                                    <div>
-                                        <p className="text-2xl font-bold text-green-400">{stats.streak}</p>
-                                        <p className="text-sm text-gray-400">Racha Actual</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold text-orange-400">{stats.bestStreak}</p>
-                                        <p className="text-sm text-gray-400">Mejor Racha</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-bold text-blue-400">{stats.successRate}%</p>
-                                        <p className="text-sm text-gray-400">Tasa de Éxito</p>
-                                    </div>
-                                </div>
+                                <label className="block text-gray-400 text-sm font-semibold mb-2" htmlFor="email">Correo Electrónico</label>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="tu@correo.com"
+                                    required
+                                    className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:ring-2 focus:ring-indigo-500"
+                                />
                             </div>
                             <div>
-                                <h4 className="font-bold text-white mb-2">Progreso Últimos 7 Días</h4>
-                                <div className="flex justify-around items-end h-40 bg-gray-700 p-4 rounded-lg">
-                                    {stats.chartData.map((day, index) => (
-                                        <div key={index} className="flex flex-col items-center flex-1">
-                                            <div className="w-full h-full flex items-end justify-center">
-                                               <div className="w-6 bg-gray-600 rounded-t-md" style={{height: '100%'}}>
-                                                   <div className={`bg-indigo-500 rounded-t-md w-full transition-all duration-500`} style={{height: `${day.success}%`}}></div>
-                                               </div>
-                                            </div>
-                                            <p className="text-xs text-gray-400 mt-1">{day.name}</p>
-                                        </div>
-                                    ))}
-                                </div>
+                                <label className="block text-gray-400 text-sm font-semibold mb-2" htmlFor="password">Contraseña</label>
+                                <input
+                                    type="password"
+                                    id="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    required
+                                    className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:ring-2 focus:ring-indigo-500"
+                                />
                             </div>
-                        </div>
-                    ) : (
-                         <p className="text-gray-500 text-center py-8">Selecciona un hábito para ver tus estadísticas o crea uno nuevo.</p>
-                    )}
+                            {error && <p className="text-red-400 text-center text-sm">{error}</p>}
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full p-3 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? 'Cargando...' : (isRegistering ? 'Registrarse' : 'Iniciar Sesión')}
+                            </button>
+                            <p className="text-center text-gray-400 text-sm mt-4">
+                                {isRegistering ? "¿Ya tienes una cuenta?" : "¿No tienes una cuenta?"}
+                                <button
+                                    type="button"
+                                    onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+                                    className="text-indigo-400 hover:underline ml-1"
+                                >
+                                    {isRegistering ? "Iniciar Sesión" : "Registrarse"}
+                                </button>
+                            </p>
+                        </form>
+                    </div>
                 </div>
             );
         };
 
-        function App() {
-          const useStickyState = (defaultValue, key) => {
-            const [value, setValue] = useState(() => {
-              try {
-                const stickyValue = window.localStorage.getItem(key);
-                return stickyValue !== null
-                  ? JSON.parse(stickyValue)
-                  : defaultValue;
-              } catch (error) {
-                console.error(`Error parsing JSON from localStorage key "${key}":`, error);
-                return defaultValue;
-              }
-            });
-            useEffect(() => {
-              try {
-                window.localStorage.setItem(key, JSON.stringify(value));
-              } catch (error) {
-                console.error(`Error setting localStorage key "${key}":`, error);
-              }
-            }, [key, value]);
-            return [value, setValue];
-          };
 
-          const [tasks, setTasks] = useStickyState([], 'tasks');
-          const [habits, setHabits] = useStickyState([], 'habits');
-          const [goals, setGoals] = useStickyState([], 'goals');
-          const [achievements, setAchievements] = useStickyState([
+        // Resto de tus componentes Modal, TaskForm, HabitForm, etc. (se mantienen igual)
+        // ... (Tu código existente para Modal, TaskForm, HabitForm, TodayView, PomodoroTimer, GoalsView, AchievementsView, DailyMotivation, HabitTracker, StatsView) ...
+        
+        function App() {
+          const [currentUser, setCurrentUser] = useState(null); // Estado para el usuario de Firebase
+          const [loadingAuth, setLoadingAuth] = useState(true); // Estado para indicar que la autenticación está cargando
+
+          // Ya no necesitamos useStickyState para estos, se cargarán de Firestore
+          const [tasks, setTasks] = useState([]);
+          const [habits, setHabits] = useState([]);
+          const [goals, setGoals] = useState([]);
+          const [achievements, setAchievements] = useState([
             { id: 1, title: "Primer Paso", description: "Crea tu primera tarea.", unlocked: false },
             { id: 2, title: "Hábito Iniciado", description: "Crea tu primer hábito.", unlocked: false },
             { id: 3, title: "Planificador", description: "Completa 10 tareas.", unlocked: false },
             { id: 4, title: "Constancia", description: "Mantén una racha de 7 días en un hábito.", unlocked: false },
-          ], 'achievements');
-          const [user, setUser] = useStickyState({ xp: 0, level: 1 }, 'user');
-          
+          ]);
+          const [userProfile, setUserProfile] = useState({ xp: 0, level: 1 }); // Renombrado a userProfile para evitar conflicto con currentUser
+
           const [isTaskModalOpen, setTaskModalOpen] = useState(false);
           const [isHabitModalOpen, setHabitModalOpen] = useState(false);
           const [editingTask, setEditingTask] = useState(null);
@@ -660,17 +147,250 @@
           const [selectedDate] = useState(new Date());
           const [activeView, setActiveView] = useState('today');
 
-          const addXp = useCallback((amount) => {
-            setUser(prevUser => {
-              const newXp = prevUser.xp + amount;
-              const xpToNextLevel = prevUser.level * 100;
-              if (newXp >= xpToNextLevel) {
-                return { xp: newXp - xpToNextLevel, level: prevUser.level + 1 };
-              }
-              return { ...prevUser, xp: newXp };
-            });
-          }, [setUser]);
+          // Hook para observar el estado de autenticación de Firebase
+          useEffect(() => {
+              const unsubscribe = auth.onAuthStateChanged(user => {
+                  setCurrentUser(user);
+                  setLoadingAuth(false);
+                  if (user) {
+                      console.log("Usuario autenticado:", user.uid);
+                      // Aquí podrías cargar el perfil del usuario desde Firestore
+                      // y luego cargar sus datos (tareas, hábitos, etc.)
+                      loadUserProfile(user.uid);
+                      loadUserTasks(user.uid);
+                      loadUserHabits(user.uid);
+                      loadUserGoals(user.uid);
+                  } else {
+                      console.log("No hay usuario autenticado.");
+                      // Limpiar estados si no hay usuario
+                      setTasks([]);
+                      setHabits([]);
+                      setGoals([]);
+                      setUserProfile({ xp: 0, level: 1 });
+                  }
+              });
+              return () => unsubscribe(); // Limpiar el observador al desmontar
+          }, []); // Se ejecuta solo una vez al montar
 
+          // *** Funciones para interactuar con Firestore (NUEVAS) ***
+
+          // Cargar perfil de usuario (XP, Nivel)
+          const loadUserProfile = async (uid) => {
+              try {
+                  const doc = await db.collection('users').doc(uid).get();
+                  if (doc.exists) {
+                      setUserProfile(doc.data());
+                  } else {
+                      // Si no existe, crear un perfil inicial
+                      await db.collection('users').doc(uid).set({ xp: 0, level: 1 });
+                      setUserProfile({ xp: 0, level: 1 });
+                  }
+              } catch (error) {
+                  console.error("Error cargando perfil de usuario:", error);
+              }
+          };
+
+          // Actualizar XP y Nivel en Firestore
+          const addXp = useCallback(async (amount) => {
+            if (!currentUser) return; // Asegúrate de que haya un usuario autenticado
+            
+            const userRef = db.collection('users').doc(currentUser.uid);
+            await db.runTransaction(async (transaction) => {
+                const doc = await transaction.get(userRef);
+                const prevUser = doc.data() || { xp: 0, level: 1 };
+                
+                let newXp = prevUser.xp + amount;
+                let newLevel = prevUser.level;
+                const xpToNextLevel = newLevel * 100;
+
+                if (newXp >= xpToNextLevel) {
+                    newLevel = prevUser.level + 1;
+                    newXp = newXp - xpToNextLevel; // Restar el XP necesario para el nivel
+                }
+                
+                transaction.update(userRef, { xp: newXp, level: newLevel });
+                setUserProfile({ xp: newXp, level: newLevel }); // Actualizar estado local
+            }).catch(error => {
+                console.error("Error al actualizar XP:", error);
+            });
+          }, [currentUser]); // Depende de currentUser
+
+
+          // Cargar tareas del usuario desde Firestore
+          const loadUserTasks = useCallback((uid) => {
+              // Obtener en tiempo real (snapshots)
+              const unsubscribe = db.collection('tasks')
+                                    .where('userId', '==', uid) // Filtra por el ID del usuario
+                                    .orderBy('createdAt', 'desc') // Opcional: ordenar por fecha de creación
+                                    .onSnapshot(snapshot => {
+                                        const loadedTasks = snapshot.docs.map(doc => ({
+                                            id: doc.id,
+                                            ...doc.data()
+                                        }));
+                                        setTasks(loadedTasks);
+                                    }, error => {
+                                        console.error("Error al cargar tareas:", error);
+                                    });
+              return unsubscribe; // Devuelve la función para desuscribirse
+          }, []);
+
+          // Cargar hábitos del usuario desde Firestore
+          const loadUserHabits = useCallback((uid) => {
+              const unsubscribe = db.collection('habits')
+                                    .where('userId', '==', uid)
+                                    .onSnapshot(snapshot => {
+                                        const loadedHabits = snapshot.docs.map(doc => ({
+                                            id: doc.id,
+                                            ...doc.data()
+                                        }));
+                                        setHabits(loadedHabits);
+                                    }, error => {
+                                        console.error("Error al cargar hábitos:", error);
+                                    });
+              return unsubscribe;
+          }, []);
+
+          // Cargar metas del usuario desde Firestore
+          const loadUserGoals = useCallback((uid) => {
+              const unsubscribe = db.collection('goals')
+                                    .where('userId', '==', uid)
+                                    .onSnapshot(snapshot => {
+                                        const loadedGoals = snapshot.docs.map(doc => ({
+                                            id: doc.id,
+                                            ...doc.data()
+                                        }));
+                                        setGoals(loadedGoals);
+                                    }, error => {
+                                        console.error("Error al cargar metas:", error);
+                                    });
+              return unsubscribe;
+          }, []);
+
+          // Desuscribirse de los listeners de Firestore cuando el componente se desmonta o el usuario cambia
+          useEffect(() => {
+              let unsubscribeTasks;
+              let unsubscribeHabits;
+              let unsubscribeGoals;
+
+              if (currentUser) {
+                  unsubscribeTasks = loadUserTasks(currentUser.uid);
+                  unsubscribeHabits = loadUserHabits(currentUser.uid);
+                  unsubscribeGoals = loadUserGoals(currentUser.uid);
+              }
+
+              return () => {
+                  if (unsubscribeTasks) unsubscribeTasks();
+                  if (unsubscribeHabits) unsubscribeHabits();
+                  if (unsubscribeGoals) unsubscribeGoals();
+              };
+          }, [currentUser, loadUserTasks, loadUserHabits, loadUserGoals]);
+
+
+          // Override de las funciones de manejo para usar Firestore en lugar de localStorage
+          const handleAddTask = async (taskData) => {
+            if (!currentUser) { console.log("No user logged in to add task."); return; }
+            try {
+                await db.collection('tasks').add({
+                    ...taskData,
+                    completed: false,
+                    userId: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                addXp(5);
+            } catch (e) {
+                console.error("Error añadiendo tarea a Firestore: ", e);
+            }
+          };
+          
+          const handleUpdateTask = async (id, updatedData) => {
+            if (!currentUser) return;
+            try {
+                await db.collection('tasks').doc(id).update(updatedData);
+            } catch (e) {
+                console.error("Error actualizando tarea en Firestore: ", e);
+            }
+          };
+
+          const handleDeleteTask = async (id) => { // Agregué una función para eliminar tareas
+            if (!currentUser) return;
+            try {
+                await db.collection('tasks').doc(id).delete();
+            } catch (e) {
+                console.error("Error eliminando tarea en Firestore: ", e);
+            }
+          };
+
+          const handleAddHabit = async (habitData) => {
+            if (!currentUser) return;
+            try {
+                await db.collection('habits').add({
+                    ...habitData,
+                    userId: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (e) {
+                console.error("Error añadiendo hábito a Firestore: ", e);
+            }
+          };
+
+          const handleUpdateHabit = async (id, updatedData) => {
+            if (!currentUser) return;
+            try {
+                await db.collection('habits').doc(id).update(updatedData);
+            } catch (e) {
+                console.error("Error actualizando hábito en Firestore: ", e);
+            }
+          };
+
+          const handleDeleteHabit = async (id) => {
+            if (!currentUser) return;
+            try {
+                await db.collection('habits').doc(id).delete();
+            } catch (e) {
+                console.error("Error eliminando hábito en Firestore: ", e);
+            }
+          };
+          
+          const handleAddGoal = async (goalData) => {
+            if (!currentUser) return;
+            try {
+                await db.collection('goals').add({
+                    ...goalData,
+                    userId: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (e) {
+                console.error("Error añadiendo meta a Firestore: ", e);
+            }
+          };
+
+          const handleDeleteGoal = async (id) => {
+            if (!currentUser) return;
+            try {
+                // Opcional: Cuando elimines una meta, podrías querer desvincular las tareas
+                // O eliminarlas si la meta es el único "dueño" de esas tareas
+                // Por ahora, solo elimina la meta
+                await db.collection('goals').doc(id).delete();
+            } catch (e) {
+                console.error("Error eliminando meta en Firestore: ", e);
+            }
+          };
+
+          const handleLogout = async () => {
+              try {
+                  await auth.signOut();
+                  console.log("Sesión cerrada.");
+                  // auth.onAuthStateChanged se encargará de limpiar los estados.
+              } catch (error) {
+                  console.error("Error al cerrar sesión:", error);
+              }
+          };
+
+          // Las funciones `calculateStatsForAchievement` y `checkAchievements` deberían ajustarse
+          // para trabajar con los datos que ahora vienen de Firestore.
+          // Por ejemplo, `tasks.length` y `tasks.filter` ahora operarán sobre los datos de Firestore.
+          // Ya no necesitas `useStickyState` para `tasks`, `habits`, `goals`, `user`.
+          // Solo `achievements` puede permanecer en `useStickyState` si son estáticos o no los quieres en DB.
           const calculateStatsForAchievement = useCallback((habit) => {
               if (!habit || !habit.progress || !habit.startDate) return { bestStreak: 0 };
               let bestStreak = 0;
@@ -696,7 +416,6 @@
               bestStreak = Math.max(bestStreak, currentStreak);
               return { bestStreak };
           }, []);
-
           const checkAchievements = useCallback(() => {
             setAchievements(prev => prev.map(ach => {
               if (ach.unlocked) return ach;
@@ -722,47 +441,19 @@
             checkAchievements();
           }, [tasks, habits, checkAchievements]);
 
-          const handleAddTask = (taskData) => {
-            const newTask = { id: Date.now().toString(), ...taskData, completed: false };
-            setTasks(prev => [...prev, newTask]);
-            addXp(5);
-          };
-          
-          const handleUpdateTask = (id, updatedData) => {
-            setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updatedData } : t));
-          };
 
-          const handleSetEditingTask = (task) => {
-            setEditingTask(task);
-            setTaskModalOpen(true);
-          };
-          
-          const handleAddHabit = (habitData) => {
-            const newHabit = { id: Date.now().toString(), ...habitData };
-            setHabits(prev => [...prev, newHabit]);
-          };
-
-          const handleUpdateHabit = (id, updatedData) => {
-            setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updatedData } : h));
-          };
-
-          const handleSetEditingHabit = (habit) => {
-            setEditingHabit(habit);
-            setHabitModalOpen(true);
-          };
-
-          const handleDeleteHabit = (id) => {
-              setHabits(prev => prev.filter(h => h.id !== id));
+          // Renderizado condicional basado en el estado de autenticación
+          if (loadingAuth) {
+              return (
+                  <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+                      <p>Cargando autenticación...</p>
+                  </div>
+              );
           }
-          
-          const handleAddGoal = (goalData) => {
-            const newGoal = { id: Date.now().toString(), ...goalData };
-            setGoals(prev => [...prev, newGoal]);
-          };
 
-          const handleDeleteGoal = (id) => {
-            setGoals(prev => prev.filter(g => g.id !== id));
-          };
+          if (!currentUser) {
+              return <AuthView onLoginSuccess={() => { /* el useEffect en App maneja esto */ }} />;
+          }
 
           const renderView = () => {
             switch (activeView) {
@@ -789,6 +480,17 @@
                     <BrainCircuit size={32} className="text-indigo-400" />
                     <h1 className="text-xl font-bold hidden lg:block">HabitGus</h1>
                   </div>
+                  {/* Info de Usuario y Nivel */}
+                  {currentUser && (
+                      <div className="text-center p-2 mb-4 hidden lg:block">
+                          <p className="text-sm text-gray-300">Bienvenido,</p>
+                          <p className="font-bold text-white text-md break-all">{currentUser.email}</p> {/* Muestra el email, puedes cambiarlo por un nombre de usuario si lo tienes */}
+                          <div className="mt-2 text-sm text-gray-400">
+                              Nivel: <span className="font-bold text-green-400">{userProfile.level}</span> | XP: <span className="font-bold text-yellow-400">{userProfile.xp} / {userProfile.level * 100}</span>
+                          </div>
+                      </div>
+                  )}
+
                   <ul className="flex flex-row md:flex-col md:space-y-2 justify-around md:justify-start">
                     <li><button onClick={() => setActiveView('today')} className={`w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg ${activeView === 'today' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}><Home /><span className="hidden lg:inline">Hoy</span></button></li>
                     <li><button onClick={() => setActiveView('habits')} className={`w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg ${activeView === 'habits' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}><Award /><span className="hidden lg:inline">Hábitos</span></button></li>
@@ -800,6 +502,11 @@
                 <div className="hidden md:block space-y-2">
                     <button onClick={() => { setEditingHabit(null); setHabitModalOpen(true); }} className="w-full p-3 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-bold flex items-center justify-center lg:justify-start gap-2"><Repeat size={24} /><span className="hidden lg:inline">Nuevo Hábito</span></button>
                     <button onClick={() => { setEditingTask(null); setTaskModalOpen(true); }} className="w-full p-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center lg:justify-start gap-2"><Plus /><span className="hidden lg:inline">Nueva Tarea</span></button>
+                    {currentUser && (
+                        <button onClick={handleLogout} className="w-full p-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold flex items-center justify-center lg:justify-start gap-2">
+                            Cerrar Sesión
+                        </button>
+                    )}
                 </div>
               </nav>
 
@@ -808,8 +515,13 @@
               </main>
               
               <div className="md:hidden fixed bottom-4 right-4 flex flex-col gap-3 z-40">
-                 <button onClick={() => { setEditingHabit(null); setHabitModalOpen(true); }} className="bg-gray-600 text-white rounded-full p-4 shadow-lg"><Repeat size={24}/></button>
-                 <button onClick={() => { setEditingTask(null); setTaskModalOpen(true); }} className="bg-indigo-600 text-white rounded-full p-4 shadow-lg"><Plus size={24}/></button>
+                   <button onClick={() => { setEditingHabit(null); setHabitModalOpen(true); }} className="bg-gray-600 text-white rounded-full p-4 shadow-lg"><Repeat size={24}/></button>
+                   <button onClick={() => { setEditingTask(null); setTaskModalOpen(true); }} className="bg-indigo-600 text-white rounded-full p-4 shadow-lg"><Plus size={24}/></button>
+                   {currentUser && (
+                        <button onClick={handleLogout} className="bg-red-600 text-white rounded-full p-4 shadow-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        </button>
+                    )}
               </div>
 
               <Modal isOpen={isTaskModalOpen} onClose={() => {setTaskModalOpen(false); setEditingTask(null);}}>
@@ -822,7 +534,6 @@
           );
         };
 
-        // 5. Finalmente, se renderiza el componente principal 'App' en el div 'root'
         ReactDOM.render(<App />, document.getElementById('root'));
 
     </script>
