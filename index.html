@@ -359,10 +359,7 @@
                     <div className="space-y-4">
                         {habits.map(habit => (
                             <div key={habit.id} className="bg-gray-800 p-4 rounded-2xl">
-                                <div className="flex justify-between items-center mb-3">
-                                    <div className="flex items-center gap-3">{getCategoryIcon(habit.category)}<span className="font-bold text-lg text-white">{habit.name}</span></div>
-                                    <div className="flex gap-2"><button onClick={() => onSetEditingHabit(habit)} className="p-1 text-gray-400 hover:text-blue-400"><Edit size={18}/></button><button onClick={() => onDeleteHabit(habit.id)} className="p-1 text-gray-400 hover:text-red-400"><Trash2 size={18}/></button></div>
-                                </div>
+                                <div className="flex justify-between items-center mb-3"><div className="flex items-center gap-3">{getCategoryIcon(habit.category)}<span className="font-bold text-lg text-white">{habit.name}</span></div><div className="flex gap-2"><button onClick={() => onSetEditingHabit(habit)} className="p-1 text-gray-400 hover:text-blue-400"><Edit size={18}/></button><button onClick={() => onDeleteHabit(habit.id)} className="p-1 text-gray-400 hover:text-red-400"><Trash2 size={18}/></button></div></div>
                                 <div className="text-sm text-gray-400 mb-3 flex items-center gap-4"><span className="flex items-center gap-1"><Repeat size={14}/> {habit.frequencyPeriod === 'Día' ? 'Diario' : `${(habit.selectedDays || []).length} días/sem`}</span><span className="flex items-center gap-1"><Clock size={14}/> {habit.duration} min</span></div>
                             </div>
                         ))}
@@ -412,8 +409,85 @@
                 </div>
             );
         };
-        const AdvancedStatsView = ({ habits }) => { /* ... (código existente y completo) ... */ };
-        const AuthView = ({ onLoginSuccess }) => { /* ... (código existente y completo) ... */ };
+        const AdvancedStatsView = ({ habits }) => {
+            const [selectedHabitId, setSelectedHabitId] = useState('');
+            const [dateRange, setDateRange] = useState('all_time');
+            useEffect(() => { if(habits.length > 0 && !selectedHabitId) { setSelectedHabitId(habits[0].id); } else if (habits.length === 0) { setSelectedHabitId(''); } }, [habits]);
+            const selectedHabit = habits.find(h => h.id === selectedHabitId);
+            const calculateStats = useCallback((habit, range) => {
+                if (!habit || !habit.progress || !habit.startDate) return { streak: 0, bestStreak: 0, successRate: 0 };
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                let rangeStartDate = new Date(habit.startDate); rangeStartDate.setHours(0, 0, 0, 0);
+                if (range === 'week') { rangeStartDate = new Date(today); rangeStartDate.setDate(today.getDate() - 6); }
+                else if (range === 'month') { rangeStartDate = new Date(today); rangeStartDate.setMonth(today.getMonth() - 1); }
+                let currentStreak = 0, bestStreak = 0, completedDays = 0, totalApplicableDays = 0;
+                let tempDate = new Date(rangeStartDate);
+                while(tempDate <= today) {
+                    const isHabitDay = habit.frequencyPeriod === 'Día' || (habit.frequencyPeriod === 'Semana' && (habit.selectedDays || []).includes(tempDate.getDay()));
+                    if(isHabitDay) { totalApplicableDays++; const dateString = tempDate.toDateString(); const isCompleted = (habit.progress[dateString] || 0) >= 1; if(isCompleted) { completedDays++; currentStreak++; } else { bestStreak = Math.max(bestStreak, currentStreak); currentStreak = 0; } }
+                    tempDate.setDate(tempDate.getDate() + 1);
+                }
+                bestStreak = Math.max(bestStreak, currentStreak);
+                const successRate = totalApplicableDays > 0 ? Math.round((completedDays / totalApplicableDays) * 100) : 0;
+                return { streak: currentStreak, bestStreak, successRate };
+            }, []);
+            const stats = selectedHabit ? calculateStats(selectedHabit, dateRange) : { streak: 0, bestStreak: 0, successRate: 0 };
+            return (
+                <div className="p-4 space-y-6">
+                    <h2 className="text-3xl font-bold text-white flex items-center"><BarChart2 className="mr-3 text-indigo-400" /> Dashboard de Estadísticas</h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-gray-800 p-6 rounded-2xl space-y-4">
+                            <h3 className="text-xl font-bold text-white">Rendimiento por Hábito</h3>
+                            <select value={selectedHabitId} onChange={(e) => setSelectedHabitId(e.target.value)} className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 mb-2"><option value="" disabled>Selecciona un hábito</option>{habits.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}</select>
+                            <div className="flex gap-2"><button onClick={() => setDateRange('week')} className={`px-3 py-1 text-sm rounded-md ${dateRange === 'week' ? 'bg-indigo-600' : 'bg-gray-600'}`}>Semana</button><button onClick={() => setDateRange('month')} className={`px-3 py-1 text-sm rounded-md ${dateRange === 'month' ? 'bg-indigo-600' : 'bg-gray-600'}`}>Mes</button><button onClick={() => setDateRange('all_time')} className={`px-3 py-1 text-sm rounded-md ${dateRange === 'all_time' ? 'bg-indigo-600' : 'bg-gray-600'}`}>Todo</button></div>
+                            <div className="grid grid-cols-3 gap-4 text-center pt-4">
+                                <div><p className="text-3xl font-bold text-green-400">{stats.streak}</p><p className="text-sm text-gray-400">Racha Actual</p></div>
+                                <div><p className="text-3xl font-bold text-orange-400">{stats.bestStreak}</p><p className="text-sm text-gray-400">Mejor Racha</p></div>
+                                <div><p className="text-3xl font-bold text-blue-400">{stats.successRate}%</p><p className="text-sm text-gray-400">Tasa de Éxito</p></div>
+                            </div>
+                        </div>
+                        <div className="bg-gray-800 p-6 rounded-2xl">
+                            <h3 className="text-xl font-bold text-white mb-4">Inversión de Tiempo por Categoría</h3>
+                            {/* <CategoryPieChart habits={habits} /> */}
+                        </div>
+                    </div>
+                    <div className="bg-gray-800 p-6 rounded-2xl">
+                        <h3 className="text-xl font-bold text-white mb-4">Mapa de Calor de Hábitos (Último Año)</h3>
+                        {/* <HabitHeatmap habit={selectedHabit} /> */}
+                    </div>
+                </div>
+            );
+        };
+        const AuthView = ({ onLoginSuccess }) => {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isRegistering, setIsRegistering] = useState(false);
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+            const handleAuth = async (e) => {
+                e.preventDefault(); setError(''); setLoading(true);
+                try { if (isRegistering) { await auth.createUserWithEmailAndPassword(email, password); } else { await auth.signInWithEmailAndPassword(email, password); }
+                } catch (err) {
+                    if (err.code === 'auth/email-already-in-use') { setError('El correo electrónico ya está en uso.'); }
+                    else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') { setError('Correo o contraseña incorrectos.'); }
+                    else { setError('Ocurrió un error. Inténtalo de nuevo.'); }
+                } finally { setLoading(false); }
+            };
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
+                    <div className="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700">
+                        <h2 className="text-3xl font-bold text-white text-center mb-6"><OwlLogo size={48} className="inline-block mr-3 text-indigo-400"/>HabitGus</h2>
+                        <form onSubmit={handleAuth} className="space-y-5">
+                            <div><label className="block text-gray-400 text-sm font-semibold mb-2" htmlFor="email">Correo Electrónico</label><input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@correo.com" required className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:ring-2 focus:ring-indigo-500"/></div>
+                            <div><label className="block text-gray-400 text-sm font-semibold mb-2" htmlFor="password">Contraseña</label><input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:ring-2 focus:ring-indigo-500"/></div>
+                            {error && <p className="text-red-400 text-center text-sm">{error}</p>}
+                            <button type="submit" disabled={loading} className="w-full p-3 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-lg disabled:opacity-50">{loading ? 'Cargando...' : (isRegistering ? 'Registrarse' : 'Iniciar Sesión')}</button>
+                            <p className="text-center text-gray-400 text-sm mt-4">{isRegistering ? "¿Ya tienes una cuenta?" : "¿No tienes una cuenta?"}<button type="button" onClick={() => { setIsRegistering(!isRegistering); setError(''); }} className="text-indigo-400 hover:underline ml-1">{isRegistering ? "Iniciar Sesión" : "Registrarse"}</button></p>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
         
         function App() {
           const [currentUser, setCurrentUser] = useState(null);
@@ -430,38 +504,25 @@
           const [selectedDateForModal, setSelectedDateForModal] = useState(new Date());
           const [activeView, setActiveView] = useState('planner');
 
-          // --- INICIO: LÓGICA DE CARGA CORREGIDA ---
           useEffect(() => {
             const unsubscribe = auth.onAuthStateChanged(user => {
                 setCurrentUser(user);
                 setLoadingAuth(false);
             });
-            return () => unsubscribe(); // Limpia el listener de autenticación al desmontar
+            return () => unsubscribe();
           }, []);
 
           useEffect(() => {
             if (currentUser) {
-                // Si hay usuario, cargar su perfil y datos
                 loadUserProfile(currentUser.uid);
                 const unsubTasks = loadUserTasks(currentUser.uid);
                 const unsubHabits = loadUserHabits(currentUser.uid);
                 const unsubGoals = loadUserGoals(currentUser.uid);
-
-                // Devolver una función de limpieza para los listeners de datos
-                return () => {
-                    unsubTasks();
-                    unsubHabits();
-                    unsubGoals();
-                };
+                return () => { unsubTasks(); unsubHabits(); unsubGoals(); };
             } else {
-                // Si no hay usuario (logout), limpiar los datos del estado
-                setTasks([]);
-                setHabits([]);
-                setGoals([]);
-                setUserProfile({ xp: 0, level: 1 });
+                setTasks([]); setHabits([]); setGoals([]); setUserProfile({ xp: 0, level: 1 });
             }
-          }, [currentUser]); // Este hook depende del estado de currentUser
-          // --- FIN: LÓGICA DE CARGA CORREGIDA ---
+          }, [currentUser]);
 
           const loadUserProfile = async (uid) => { try { const doc = await db.collection('users').doc(uid).get(); if (doc.exists) { setUserProfile(doc.data()); } else { await db.collection('users').doc(uid).set({ xp: 0, level: 1 }); setUserProfile({ xp: 0, level: 1 }); } } catch (error) { console.error("Error cargando perfil:", error); } };
           const addXp = useCallback(async (amount) => { if (!currentUser) return; const userRef = db.collection('users').doc(currentUser.uid); try { await db.runTransaction(async (transaction) => { const doc = await transaction.get(userRef); const prevUser = doc.data() || { xp: 0, level: 1 }; let newXp = prevUser.xp + amount; let newLevel = prevUser.level; const xpToNextLevel = newLevel * 100; if (newXp >= xpToNextLevel) { newLevel = prevUser.level + 1; newXp = newXp - xpToNextLevel; } transaction.update(userRef, { xp: newXp, level: newLevel }); setUserProfile({ xp: newXp, level: newLevel }); }); } catch (error) { console.error("Error al actualizar XP:", error); } }, [currentUser]);
