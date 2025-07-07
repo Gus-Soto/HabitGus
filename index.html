@@ -1,3 +1,8 @@
+Claro, aquí tienes el código completo y corregido para tu archivo `index.html`.
+
+He reemplazado la función `App` original por la versión que soluciona el error, definiendo las funciones `handleSetEditingTask` y `handleSetEditingHabit` que faltaban. Simplemente copia y pega todo este contenido en tu archivo `index.html`.
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -273,8 +278,8 @@
                 </form>
             );
         };
-        // --- Otros componentes (TodayView, PomodoroTimer, GoalsView, AchievementsView, DailyMotivation, HabitTracker, StatsView) ---
-        // Se mantienen IGUAL, simplemente los incluyo aquí por completitud.
+        
+        // --- Otros componentes (TodayView, PomodoroTimer, etc.) sin cambios ---
         const TodayView = ({ tasks, habits, onUpdateTask, onSetEditingTask, onSetEditingHabit, addXp, onUpdateHabit }) => {
             const todayString = new Date().toISOString().split('T')[0];
             const todaysTasks = tasks.filter(t => t.date === todayString);
@@ -650,11 +655,7 @@
             const [isRegistering, setIsRegistering] = useState(false);
             const [error, setError] = useState('');
             const [loading, setLoading] = useState(false);
-
-            // Importante: Cleanup para evitar la advertencia de "unmounted component"
-            // Cuando este componente se desmonta (porque el usuario se loguea y App renderiza otra cosa),
-            // cualquier operación asíncrona pendiente (como la promesa de login/registro)
-            // podría intentar actualizar el estado de un componente que ya no está en el DOM.
+            
             const mountedRef = React.useRef(true);
             useEffect(() => {
                 mountedRef.current = true;
@@ -671,18 +672,11 @@
                 try {
                     if (isRegistering) {
                         await auth.createUserWithEmailAndPassword(email, password);
-                        console.log("Usuario registrado con éxito");
                     } else {
                         await auth.signInWithEmailAndPassword(email, password);
-                        console.log("Sesión iniciada con éxito");
-                    }
-                    // Si el componente sigue montado, podemos actualizar el estado
-                    if (mountedRef.current) {
-                        // onLoginSuccess es llamado por el useEffect en App cuando auth.currentUser cambia
-                        // Ya no es necesario llamar onLoginSuccess aquí directamente, auth.onAuthStateChanged lo maneja.
                     }
                 } catch (err) {
-                    if (mountedRef.current) { // Solo actualiza el estado si el componente sigue montado
+                    if (mountedRef.current) {
                         console.error("Error de autenticación:", err.code, err.message);
                         if (err.code === 'auth/email-already-in-use') {
                             setError('El correo electrónico ya está en uso. Intenta iniciar sesión.');
@@ -697,7 +691,7 @@
                         }
                     }
                 } finally {
-                    if (mountedRef.current) { // Solo actualiza el estado si el componente sigue montado
+                    if (mountedRef.current) {
                         setLoading(false);
                     }
                 }
@@ -759,22 +753,21 @@
             );
         };
         
+        // --- CÓDIGO CORREGIDO ---
         function App() {
-          const [currentUser, setCurrentUser] = useState(null); // Estado para el usuario de Firebase
-          const [loadingAuth, setLoadingAuth] = useState(true); // Estado para indicar que la autenticación está cargando
+          const [currentUser, setCurrentUser] = useState(null);
+          const [loadingAuth, setLoadingAuth] = useState(true);
 
-          // Ya no necesitamos useStickyState para estos datos, se cargarán de Firestore
           const [tasks, setTasks] = useState([]);
           const [habits, setHabits] = useState([]);
           const [goals, setGoals] = useState([]);
-          // Los logros se pueden mantener locales si son estáticos
           const [achievements, setAchievements] = useState([
             { id: 1, title: "Primer Paso", description: "Crea tu primera tarea.", unlocked: false },
             { id: 2, title: "Hábito Iniciado", description: "Crea tu primer hábito.", unlocked: false },
             { id: 3, title: "Planificador", description: "Completa 10 tareas.", unlocked: false },
             { id: 4, title: "Constancia", description: "Mantén una racha de 7 días en un hábito.", unlocked: false },
           ]);
-          const [userProfile, setUserProfile] = useState({ xp: 0, level: 1 }); // Perfil de usuario (XP, nivel)
+          const [userProfile, setUserProfile] = useState({ xp: 0, level: 1 });
 
           const [isTaskModalOpen, setTaskModalOpen] = useState(false);
           const [isHabitModalOpen, setHabitModalOpen] = useState(false);
@@ -783,41 +776,31 @@
           const [selectedDate] = useState(new Date());
           const [activeView, setActiveView] = useState('today');
 
-          // Hook para observar el estado de autenticación de Firebase
           useEffect(() => {
-              // firebase.auth() es la misma instancia global 'auth'
               const unsubscribe = auth.onAuthStateChanged(user => {
                   setCurrentUser(user);
                   setLoadingAuth(false);
                   if (user) {
                       console.log("Usuario autenticado:", user.uid);
-                      // Cargar el perfil del usuario y sus datos de Firestore
                       loadUserProfile(user.uid);
-                      loadUserTasks(user.uid);
-                      loadUserHabits(user.uid);
-                      loadUserGoals(user.uid);
+                      // Los listeners de datos se manejan en el siguiente useEffect
                   } else {
                       console.log("No hay usuario autenticado.");
-                      // Limpiar estados si no hay usuario
                       setTasks([]);
                       setHabits([]);
                       setGoals([]);
                       setUserProfile({ xp: 0, level: 1 });
                   }
               });
-              return () => unsubscribe(); // Limpiar el observador al desmontar el componente
-          }, []); // Se ejecuta solo una vez al montar
+              return () => unsubscribe();
+          }, []);
 
-          // *** Funciones para interactuar con Firestore (NUEVAS O MODIFICADAS) ***
-
-          // Cargar perfil de usuario (XP, Nivel)
           const loadUserProfile = async (uid) => {
               try {
                   const doc = await db.collection('users').doc(uid).get();
                   if (doc.exists) {
                       setUserProfile(doc.data());
                   } else {
-                      // Si el perfil no existe, crear uno inicial en Firestore
                       await db.collection('users').doc(uid).set({ xp: 0, level: 1 });
                       setUserProfile({ xp: 0, level: 1 });
                   }
@@ -826,231 +809,152 @@
               }
           };
 
-          // Actualizar XP y Nivel en Firestore
           const addXp = useCallback(async (amount) => {
-            if (!currentUser) return; // Asegúrate de que haya un usuario autenticado
-            
+            if (!currentUser) return;
             const userRef = db.collection('users').doc(currentUser.uid);
             try {
                 await db.runTransaction(async (transaction) => {
                     const doc = await transaction.get(userRef);
                     const prevUser = doc.data() || { xp: 0, level: 1 };
-                    
                     let newXp = prevUser.xp + amount;
                     let newLevel = prevUser.level;
                     const xpToNextLevel = newLevel * 100;
-
                     if (newXp >= xpToNextLevel) {
                         newLevel = prevUser.level + 1;
-                        newXp = newXp - xpToNextLevel; // Restar el XP necesario para el nivel
+                        newXp = newXp - xpToNextLevel;
                     }
-                    
                     transaction.update(userRef, { xp: newXp, level: newLevel });
-                    setUserProfile({ xp: newXp, level: newLevel }); // Actualizar estado local
+                    setUserProfile({ xp: newXp, level: newLevel });
                 });
             } catch (error) {
                 console.error("Error al actualizar XP:", error);
             }
-          }, [currentUser]); // Depende de currentUser para que se re-cree si el usuario cambia
+          }, [currentUser]);
 
-
-          // Cargar tareas del usuario desde Firestore en tiempo real
           const loadUserTasks = useCallback((uid) => {
-              const unsubscribe = db.collection('tasks')
-                                    .where('userId', '==', uid) // FILTRA por el ID del usuario
-                                    .orderBy('createdAt', 'desc') // Opcional: ordenar por fecha de creación
-                                    .onSnapshot(snapshot => {
-                                        const loadedTasks = snapshot.docs.map(doc => ({
-                                            id: doc.id,
-                                            ...doc.data(),
-                                            // Convertir Timestamp de Firebase a JS Date si es necesario
-                                            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : null
-                                        }));
-                                        setTasks(loadedTasks);
-                                    }, error => {
-                                        console.error("Error al cargar tareas:", error);
-                                    });
-              return unsubscribe; // Devuelve la función para desuscribirse
+              return db.collection('tasks').where('userId', '==', uid).orderBy('createdAt', 'desc')
+                  .onSnapshot(snapshot => {
+                      const loadedTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate() }));
+                      setTasks(loadedTasks);
+                  }, error => console.error("Error al cargar tareas:", error));
           }, []);
 
-          // Cargar hábitos del usuario desde Firestore en tiempo real
           const loadUserHabits = useCallback((uid) => {
-              const unsubscribe = db.collection('habits')
-                                    .where('userId', '==', uid)
-                                    .onSnapshot(snapshot => {
-                                        const loadedHabits = snapshot.docs.map(doc => ({
-                                            id: doc.id,
-                                            ...doc.data(),
-                                            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : null
-                                        }));
-                                        setHabits(loadedHabits);
-                                    }, error => {
-                                        console.error("Error al cargar hábitos:", error);
-                                    });
-              return unsubscribe;
+              return db.collection('habits').where('userId', '==', uid)
+                  .onSnapshot(snapshot => {
+                      const loadedHabits = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate() }));
+                      setHabits(loadedHabits);
+                  }, error => console.error("Error al cargar hábitos:", error));
           }, []);
 
-          // Cargar metas del usuario desde Firestore en tiempo real
           const loadUserGoals = useCallback((uid) => {
-              const unsubscribe = db.collection('goals')
-                                    .where('userId', '==', uid)
-                                    .onSnapshot(snapshot => {
-                                        const loadedGoals = snapshot.docs.map(doc => ({
-                                            id: doc.id,
-                                            ...doc.data(),
-                                            createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : null
-                                        }));
-                                        setGoals(loadedGoals);
-                                    }, error => {
-                                        console.error("Error al cargar metas:", error);
-                                    });
-              return unsubscribe;
+              return db.collection('goals').where('userId', '==', uid)
+                  .onSnapshot(snapshot => {
+                      const loadedGoals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate() }));
+                      setGoals(loadedGoals);
+                  }, error => console.error("Error al cargar metas:", error));
           }, []);
 
-          // Este useEffect se encarga de iniciar y limpiar los listeners de Firestore.
           useEffect(() => {
-              let unsubscribeTasks;
-              let unsubscribeHabits;
-              let unsubscribeGoals;
-
               if (currentUser) {
-                  unsubscribeTasks = loadUserTasks(currentUser.uid);
-                  unsubscribeHabits = loadUserHabits(currentUser.uid);
-                  unsubscribeGoals = loadUserGoals(currentUser.uid);
+                  const unsubscribeTasks = loadUserTasks(currentUser.uid);
+                  const unsubscribeHabits = loadUserHabits(currentUser.uid);
+                  const unsubscribeGoals = loadUserGoals(currentUser.uid);
+                  return () => {
+                      unsubscribeTasks();
+                      unsubscribeHabits();
+                      unsubscribeGoals();
+                  };
               }
+          }, [currentUser, loadUserTasks, loadUserHabits, loadUserGoals]);
 
-              // Función de limpieza: se ejecuta cuando el componente se desmonta o cuando currentUser cambia
-              return () => {
-                  if (unsubscribeTasks) unsubscribeTasks();
-                  if (unsubscribeHabits) unsubscribeHabits();
-                  if (unsubscribeGoals) unsubscribeGoals();
-              };
-          }, [currentUser, loadUserTasks, loadUserHabits, loadUserGoals]); // Dependencias: se re-ejecuta si currentUser cambia
+          // --- INICIO DE LA SOLUCIÓN: Funciones que faltaban ---
+          const handleSetEditingTask = (task) => {
+            setEditingTask(task);
+            setTaskModalOpen(true);
+          };
 
-          // Override de las funciones de manejo para usar Firestore en lugar de localStorage
+          const handleSetEditingHabit = (habit) => {
+            setEditingHabit(habit);
+            setHabitModalOpen(true);
+          };
+          // --- FIN DE LA SOLUCIÓN ---
+          
           const handleAddTask = async (taskData) => {
-            if (!currentUser) { console.log("No user logged in to add task."); return; }
+            if (!currentUser) return;
             try {
-                await db.collection('tasks').add({
-                    ...taskData,
-                    completed: false,
-                    userId: currentUser.uid, // Asegúrate de guardar el ID del usuario
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp() // Para fecha de creación
-                });
+                await db.collection('tasks').add({ ...taskData, completed: false, userId: currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                 addXp(5);
-            } catch (e) {
-                console.error("Error añadiendo tarea a Firestore: ", e);
-            }
+            } catch (e) { console.error("Error añadiendo tarea:", e); }
           };
           
           const handleUpdateTask = async (id, updatedData) => {
             if (!currentUser) return;
-            try {
-                await db.collection('tasks').doc(id).update(updatedData);
-            } catch (e) {
-                console.error("Error actualizando tarea en Firestore: ", e);
-            }
+            try { await db.collection('tasks').doc(id).update(updatedData); } 
+            catch (e) { console.error("Error actualizando tarea:", e); }
           };
 
-          const handleDeleteTask = async (id) => { // Función para eliminar tareas (puedes añadir un botón si quieres)
+          const handleDeleteTask = async (id) => {
             if (!currentUser) return;
-            try {
-                await db.collection('tasks').doc(id).delete();
-            } catch (e) {
-                console.error("Error eliminando tarea en Firestore: ", e);
-            }
+            try { await db.collection('tasks').doc(id).delete(); } 
+            catch (e) { console.error("Error eliminando tarea:", e); }
           };
 
           const handleAddHabit = async (habitData) => {
             if (!currentUser) return;
-            try {
-                await db.collection('habits').add({
-                    ...habitData,
-                    userId: currentUser.uid,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (e) {
-                console.error("Error añadiendo hábito a Firestore: ", e);
-            }
+            try { await db.collection('habits').add({ ...habitData, userId: currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); } 
+            catch (e) { console.error("Error añadiendo hábito:", e); }
           };
 
           const handleUpdateHabit = async (id, updatedData) => {
             if (!currentUser) return;
-            try {
-                await db.collection('habits').doc(id).update(updatedData);
-            } catch (e) {
-                console.error("Error actualizando hábito en Firestore: ", e);
-            }
+            try { await db.collection('habits').doc(id).update(updatedData); } 
+            catch (e) { console.error("Error actualizando hábito:", e); }
           };
 
           const handleDeleteHabit = async (id) => {
             if (!currentUser) return;
-            try {
-                await db.collection('habits').doc(id).delete();
-            } catch (e) {
-                console.error("Error eliminando hábito en Firestore: ", e);
-            }
+            try { await db.collection('habits').doc(id).delete(); } 
+            catch (e) { console.error("Error eliminando hábito:", e); }
           };
           
           const handleAddGoal = async (goalData) => {
             if (!currentUser) return;
-            try {
-                await db.collection('goals').add({
-                    ...goalData,
-                    userId: currentUser.uid,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (e) {
-                console.error("Error añadiendo meta a Firestore: ", e);
-            }
+            try { await db.collection('goals').add({ ...goalData, userId: currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); } 
+            catch (e) { console.error("Error añadiendo meta:", e); }
           };
 
           const handleDeleteGoal = async (id) => {
             if (!currentUser) return;
-            try {
-                await db.collection('goals').doc(id).delete();
-            } catch (e) {
-                console.error("Error eliminando meta en Firestore: ", e);
-            }
+            try { await db.collection('goals').doc(id).delete(); } 
+            catch (e) { console.error("Error eliminando meta:", e); }
           };
 
           const handleLogout = async () => {
-              try {
-                  await auth.signOut();
-                  console.log("Sesión cerrada.");
-                  // auth.onAuthStateChanged se encargará de limpiar los estados automáticamente.
-              } catch (error) {
-                  console.error("Error al cerrar sesión:", error);
-              }
+              try { await auth.signOut(); } 
+              catch (error) { console.error("Error al cerrar sesión:", error); }
           };
 
-          // Las funciones `calculateStatsForAchievement` y `checkAchievements`
-          // funcionarán con los datos que se cargan de Firestore (tasks y habits).
           const calculateStatsForAchievement = useCallback((habit) => {
               if (!habit || !habit.progress || !habit.startDate) return { bestStreak: 0 };
               let bestStreak = 0;
               let currentStreak = 0;
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              const startDate = new Date(habit.startDate);
-              startDate.setHours(0, 0, 0, 0);
+              const today = new Date(); today.setHours(0, 0, 0, 0);
+              const startDate = new Date(habit.startDate); startDate.setHours(0, 0, 0, 0);
               let tempDate = new Date(startDate);
               while (tempDate <= today) {
                   const isHabitDay = habit.frequencyPeriod === 'Día' || (habit.frequencyPeriod === 'Semana' && (habit.selectedDays || []).includes(tempDate.getDay()));
                   if(isHabitDay){
                     const dateString = tempDate.toDateString();
-                    if ((habit.progress[dateString] || 0) >= 1) {
-                        currentStreak++;
-                    } else {
-                        bestStreak = Math.max(bestStreak, currentStreak);
-                        currentStreak = 0;
-                    }
+                    if ((habit.progress[dateString] || 0) >= 1) currentStreak++;
+                    else { bestStreak = Math.max(bestStreak, currentStreak); currentStreak = 0; }
                   }
                   tempDate.setDate(tempDate.getDate() + 1);
               }
               bestStreak = Math.max(bestStreak, currentStreak);
               return { bestStreak };
           }, []);
+
           const checkAchievements = useCallback(() => {
             setAchievements(prev => prev.map(ach => {
               if (ach.unlocked) return ach;
@@ -1070,28 +974,37 @@
               }
               return { ...ach, unlocked };
             }));
-          }, [tasks, habits, setAchievements, calculateStatsForAchievement]);
+          }, [tasks, habits, calculateStatsForAchievement]);
           
           useEffect(() => {
             checkAchievements();
           }, [tasks, habits, checkAchievements]);
 
-
-          // 8. Renderizado condicional: Muestra la pantalla de carga, autenticación o la aplicación principal.
           if (loadingAuth) {
-              return (
-                  <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-                      <p>Cargando autenticación de Firebase...</p>
-                  </div>
-              );
+              return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white"><p>Cargando...</p></div>;
           }
 
           if (!currentUser) {
-              // Si no hay usuario, muestra la vista de autenticación
-              return <AuthView onLoginSuccess={() => { /* El useEffect se encarga de esto */ }} />;
+              return <AuthView />;
           }
+          
+          const renderActiveView = () => {
+            switch (activeView) {
+              case 'today':
+                return <TodayView tasks={tasks} habits={habits} onUpdateTask={handleUpdateTask} onUpdateHabit={handleUpdateHabit} onSetEditingTask={handleSetEditingTask} onSetEditingHabit={handleSetEditingHabit} addXp={addXp} />;
+              case 'habits':
+                return <HabitTracker habits={habits} onSetEditingHabit={handleSetEditingHabit} onDeleteHabit={handleDeleteHabit} />;
+              case 'goals':
+                return <GoalsView goals={goals} onAddGoal={handleAddGoal} onDeleteGoal={handleDeleteGoal} tasks={tasks} />;
+              case 'stats':
+                return <StatsView habits={habits} />;
+              case 'achievements':
+                return <AchievementsView achievements={achievements} />;
+              default:
+                return <TodayView tasks={tasks} habits={habits} onUpdateTask={handleUpdateTask} onUpdateHabit={handleUpdateHabit} onSetEditingTask={handleSetEditingTask} onSetEditingHabit={handleSetEditingHabit} addXp={addXp} />;
+            }
+          };
 
-          // Si hay un usuario autenticado, muestra la aplicación principal
           return (
             <div className="bg-gray-900 text-white min-h-screen font-sans flex flex-col md:flex-row">
               <nav className="w-full md:w-20 lg:w-64 bg-gray-800 p-2 md:p-4 flex md:flex-col justify-between border-b-2 md:border-b-0 md:border-r-2 border-gray-700">
@@ -1100,17 +1013,15 @@
                     <BrainCircuit size={32} className="text-indigo-400" />
                     <h1 className="text-xl font-bold hidden lg:block">HabitGus</h1>
                   </div>
-                  {/* Info de Usuario y Nivel */}
                   {currentUser && (
                       <div className="text-center p-2 mb-4 hidden lg:block">
                           <p className="text-sm text-gray-300">Bienvenido,</p>
-                          <p className="font-bold text-white text-md break-all">{currentUser.email}</p> {/* Muestra el email del usuario logueado */}
+                          <p className="font-bold text-white text-md break-all">{currentUser.email}</p>
                           <div className="mt-2 text-sm text-gray-400">
                               Nivel: <span className="font-bold text-green-400">{userProfile.level}</span> | XP: <span className="font-bold text-yellow-400">{userProfile.xp} / {userProfile.level * 100}</span>
                           </div>
                       </div>
                   )}
-
                   <ul className="flex flex-row md:flex-col md:space-y-2 justify-around md:justify-start">
                     <li><button onClick={() => setActiveView('today')} className={`w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg ${activeView === 'today' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}><Home /><span className="hidden lg:inline">Hoy</span></button></li>
                     <li><button onClick={() => setActiveView('habits')} className={`w-full flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg ${activeView === 'habits' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}><Award /><span className="hidden lg:inline">Hábitos</span></button></li>
@@ -1123,50 +1034,13 @@
                     <button onClick={() => { setEditingHabit(null); setHabitModalOpen(true); }} className="w-full p-3 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-bold flex items-center justify-center lg:justify-start gap-2"><Repeat size={24} /><span className="hidden lg:inline">Nuevo Hábito</span></button>
                     <button onClick={() => { setEditingTask(null); setTaskModalOpen(true); }} className="w-full p-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center lg:justify-start gap-2"><Plus /><span className="hidden lg:inline">Nueva Tarea</span></button>
                     {currentUser && (
-                        <button onClick={handleLogout} className="w-full p-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold flex items-center justify-center lg:justify-start gap-2">
-                            Cerrar Sesión
-                        </button>
+                        <button onClick={handleLogout} className="w-full p-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold flex items-center justify-center lg:justify-start gap-2">Cerrar Sesión</button>
                     )}
                 </div>
               </nav>
 
               <main className="flex-1 overflow-y-auto">
-                {/* SOLUCIÓN: Integrar la lógica del switch directamente aquí */}
-                {activeView === 'today' && (
-                    <TodayView 
-                        tasks={tasks} 
-                        habits={habits} 
-                        onUpdateTask={handleUpdateTask} 
-                        onUpdateHabit={handleUpdateHabit} 
-                        onSetEditingTask={handleSetEditingTask} 
-                        onSetEditingHabit={handleSetEditingHabit} 
-                        addXp={addXp} 
-                    />
-                )}
-                {activeView === 'habits' && (
-                    <HabitTracker habits={habits} onSetEditingHabit={handleSetEditingHabit} onDeleteHabit={handleDeleteHabit} />
-                )}
-                {activeView === 'goals' && (
-                    <GoalsView goals={goals} onAddGoal={handleAddGoal} onDeleteGoal={handleDeleteGoal} tasks={tasks} />
-                )}
-                {activeView === 'stats' && (
-                    <StatsView habits={habits} />
-                )}
-                {activeView === 'achievements' && (
-                    <AchievementsView achievements={achievements} />
-                )}
-                {/* Si no hay vista activa o si se quiere un fallback */}
-                {activeView !== 'today' && activeView !== 'habits' && activeView !== 'goals' && activeView !== 'stats' && activeView !== 'achievements' && (
-                    <TodayView 
-                        tasks={tasks} 
-                        habits={habits} 
-                        onUpdateTask={handleUpdateTask} 
-                        onUpdateHabit={handleUpdateHabit} 
-                        onSetEditingTask={handleSetEditingTask} 
-                        onSetEditingHabit={handleSetEditingHabit} 
-                        addXp={addXp} 
-                    />
-                )}
+                {renderActiveView()}
               </main>
               
               <div className="md:hidden fixed bottom-4 right-4 flex flex-col gap-3 z-40">
@@ -1189,11 +1063,9 @@
           );
         };
 
-        // 9. Finalmente, se renderiza el componente principal 'App' en el div 'root'
-        // Es esencial que ReactDOM.render se llame DESPUÉS de que todos los componentes
-        // y funciones que usa React estén definidos y accesibles.
         ReactDOM.render(<App />, document.getElementById('root'));
 
     </script>
 </body>
 </html>
+```
