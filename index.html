@@ -282,7 +282,9 @@
             const days = Array.from({ length: startDay }, (_, i) => null).concat(Array.from({ length: daysInMonth }, (_, i) => i + 1));
             const monthName = currentDate.toLocaleDateString('es-ES', { month: 'long' });
             const year = currentDate.getFullYear();
-            const weekDays = ["D", "L", "M", "X", "J", "V", "S"];
+            
+            // --- CAMBIO: Días de la semana en inglés ---
+            const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
             const handleDayClick = (day) => { if (!day) return; const newSelectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day); onDateSelect(newSelectedDate); };
             const changeMonth = (offset) => { setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1)); };
@@ -290,13 +292,15 @@
             return (
                 <div className="bg-gray-800 rounded-2xl p-4 mx-4">
                     <div className="flex justify-between items-center mb-4"><button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-700"><ChevronLeft/></button><h4 className="text-lg font-bold text-white capitalize">{monthName} {year}</h4><button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-700"><ChevronRight/></button></div>
-                    <div className="grid grid-cols-7 gap-2 text-center">
-                        {weekDays.map(day => <div key={day} className="text-xs font-bold text-gray-400">{day}</div>)}
+                    <div className="grid grid-cols-7 gap-2">
+                        {/* --- CAMBIO: Centrado de los encabezados --- */}
+                        {weekDays.map(day => <div key={day} className="text-xs font-bold text-gray-400 flex items-center justify-center h-10">{day}</div>)}
+                        
                         {days.map((day, index) => {
                             const dateStr = day ? `${year}-${String(currentDate.getMonth() + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}` : null;
                             const hasEvent = dateStr && daysWithEvents.has(dateStr);
                             const isToday = new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
-                            return (<button key={index} onClick={() => handleDayClick(day)} disabled={!day} className={`w-10 h-10 rounded-full flex items-center justify-center relative transition-colors ${!day ? 'bg-transparent' : 'hover:bg-gray-700'} ${isToday ? 'bg-indigo-600 text-white' : 'text-gray-300'}`}>{day}{hasEvent && <div className="absolute bottom-1 w-1.5 h-1.5 bg-indigo-400 rounded-full"></div>}</button>);
+                            return (<button key={index} onClick={() => handleDayClick(day)} disabled={!day} className={`w-10 h-10 rounded-full flex items-center justify-center relative transition-colors mx-auto ${!day ? 'bg-transparent cursor-default' : 'hover:bg-gray-700'} ${isToday ? 'bg-indigo-600 text-white' : 'text-gray-300'}`}>{day}{hasEvent && <div className="absolute bottom-1.5 w-1.5 h-1.5 bg-indigo-400 rounded-full"></div>}</button>);
                         })}
                     </div>
                 </div>
@@ -390,7 +394,7 @@
           const [isHabitModalOpen, setHabitModalOpen] = useState(false);
           const [editingTask, setEditingTask] = useState(null);
           const [editingHabit, setEditingHabit] = useState(null);
-          const [selectedDateForModal] = useState(new Date());
+          const [selectedDateForModal, setSelectedDateForModal] = useState(new Date());
           const [activeView, setActiveView] = useState('planner');
 
           useEffect(() => { const unsubscribe = auth.onAuthStateChanged(user => { setCurrentUser(user); setLoadingAuth(false); if (user) { loadUserProfile(user.uid); const unsubTasks = loadUserTasks(user.uid); const unsubHabits = loadUserHabits(user.uid); const unsubGoals = loadUserGoals(user.uid); return () => { unsubTasks(); unsubHabits(); unsubGoals(); }; } else { setTasks([]); setHabits([]); setGoals([]); setUserProfile({ xp: 0, level: 1 }); } }); return () => unsubscribe(); }, []);
